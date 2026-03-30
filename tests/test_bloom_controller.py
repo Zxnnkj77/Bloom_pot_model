@@ -22,6 +22,7 @@ SPEC.loader.exec_module(MODULE)
 
 
 BloomPotController = MODULE.BloomPotController
+ControllerState = MODULE.ControllerState
 ModelValidationError = MODULE.ModelValidationError
 
 
@@ -40,6 +41,93 @@ def validate_schema(payload, schema_path):
         key=lambda error: list(error.absolute_path),
     )
     return errors
+
+
+def build_plant_record(**overrides):
+    record = {
+        "id": "test_plant",
+        "common_name": "Test Plant",
+        "scientific_name": "Testus plantus",
+        "legacy_category": "tropical",
+        "legacy_light_preference_lux": 1000,
+        "legacy_water_preference": "evenly_moist",
+        "controller_family": "soil_even_moist",
+        "controller_family_confidence": "legacy_rule_based",
+        "migration_status": "accepted_auto",
+        "special_handling": [],
+        "manual_review_reasons": [],
+        "provenance": {
+            "source_file": "legacy.json",
+            "source_type": "legacy_backup_record",
+            "match_type": "exact_common_name_and_scientific_name",
+        },
+    }
+    record.update(overrides)
+    return record
+
+
+def build_unresolved_record(**overrides):
+    record = {
+        "id": "unresolved_plant",
+        "common_name": "Unresolved Plant",
+        "scientific_name": "Unresolved plantus",
+        "legacy_category": "succulent",
+        "legacy_light_preference_lux": 1000,
+        "legacy_water_preference": "evenly_moist",
+        "unresolved_reasons": [
+            "unsupported_legacy_category_water_preference_combination"
+        ],
+        "provenance": {
+            "source_file": "legacy.json",
+            "source_type": "legacy_backup_record",
+            "match_type": "exact_common_name_and_scientific_name",
+        },
+    }
+    record.update(overrides)
+    return record
+
+
+def build_controller_profile(**overrides):
+    profile = {
+        "moisture_target": {"minimum": 0.18, "maximum": 0.28},
+        "hard_dry_cutoff": 0.05,
+        "hard_wet_cutoff": 0.38,
+        "watering_dose_ml": 60,
+        "cooldown_minutes": 360,
+        "confirm_low_readings": 1,
+        "max_daily_dose_ml": 240,
+        "sensor_model": "capacitive_soil_v1",
+        "substrate_type": "potting_mix",
+        "autowater_enabled": True,
+        "manual_review_reasons": [],
+    }
+    profile.update(overrides)
+    return profile
+
+
+def make_controller(
+    tmp_path,
+    *,
+    plant_records=None,
+    controller_profiles=None,
+    unresolved_species=None,
+    default_reservoir_ml=200.0,
+):
+    plant_path = tmp_path / "plant_facts.json"
+    controller_path = tmp_path / "controller_profiles.json"
+    unresolved_path = tmp_path / "unresolved_species.json"
+    write_json(plant_path, plant_records or [build_plant_record()])
+    write_json(
+        controller_path,
+        controller_profiles or {"soil_even_moist": build_controller_profile()},
+    )
+    write_json(unresolved_path, unresolved_species or [])
+    return BloomPotController(
+        plant_facts_path=plant_path,
+        controller_profiles_path=controller_path,
+        unresolved_species_path=unresolved_path,
+        default_reservoir_ml=default_reservoir_ml,
+    )
 
 
 def test_state_persistence(tmp_path):
@@ -78,34 +166,60 @@ def test_dry_trigger():
     assert "hard dry cutoff" in result["reason"]
 
 
-def test_wet_no_trigger():
+def test_hard_dry_cutoff_takes_precedence_over_confirm_low_readings():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = controller.initialize_state(reservoir_ml=200.0)
+
+    result = controller.step(
+        "golden_pothos",
+        0.05,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+
+    assert result["pump_on"] is True
+    assert result["dose_ml"] == 50.0
+    assert "hard dry cutoff" in result["reason"]
+    assert state.low_reading_count == 0
+
+
+@pytest.mark.parametrize(
+    ("soil_moisture", "expected_reason"),
+    [
+        (0.18, "inside target band"),
+        (0.28, "inside target band"),
+        (0.38, "wet cutoff"),
+    ],
+)
+def test_cutoff_boundaries(soil_moisture, expected_reason):
     controller = BloomPotController(default_reservoir_ml=200.0)
     state = controller.initialize_state(reservoir_ml=200.0)
 
     result = controller.step(
         "peace_lily",
-        0.5,
+        soil_moisture,
         timestamp="2026-03-29T08:00:00+00:00",
         state=state,
     )
 
     assert result["pump_on"] is False
     assert result["dose_ml"] == 0.0
-    assert "wet cutoff" in result["reason"]
+    assert expected_reason in result["reason"]
 
 
-def test_reservoir_decrement():
-    controller = BloomPotController(default_reservoir_ml=200.0)
-    state = controller.initialize_state(reservoir_ml=200.0)
+def test_reservoir_exactly_equal_to_dose_waters():
+    controller = BloomPotController(default_reservoir_ml=60.0)
+    state = controller.initialize_state(reservoir_ml=60.0)
 
-    controller.step(
+    result = controller.step(
         "peace_lily",
         0.03,
         timestamp="2026-03-29T08:00:00+00:00",
         state=state,
     )
 
-    assert state.reservoir_ml == 140.0
+    assert result["pump_on"] is True
+    assert state.reservoir_ml == 0.0
 
 
 def test_cooldown_behavior():
@@ -128,6 +242,27 @@ def test_cooldown_behavior():
     assert first["pump_on"] is True
     assert second["pump_on"] is False
     assert "Cooldown active" in second["reason"]
+
+
+def test_cooldown_exact_boundary_allows_watering():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = controller.initialize_state(reservoir_ml=200.0)
+
+    controller.step(
+        "peace_lily",
+        0.03,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+    result = controller.step(
+        "peace_lily",
+        0.03,
+        timestamp="2026-03-29T14:00:00+00:00",
+        state=state,
+    )
+
+    assert result["pump_on"] is True
+    assert "Cooldown active" not in result["reason"]
 
 
 def test_confirm_low_readings_behavior():
@@ -153,11 +288,104 @@ def test_confirm_low_readings_behavior():
     assert "Confirmed 2 consecutive low readings" in second["reason"]
 
 
+def test_low_reading_count_resets_on_non_low_reading():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = controller.initialize_state(reservoir_ml=200.0)
+
+    first = controller.step(
+        "golden_pothos",
+        0.1,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+    middle = controller.step(
+        "golden_pothos",
+        0.18,
+        timestamp="2026-03-29T12:00:00+00:00",
+        state=state,
+    )
+    third = controller.step(
+        "golden_pothos",
+        0.1,
+        timestamp="2026-03-29T21:00:00+00:00",
+        state=state,
+    )
+
+    assert first["pump_on"] is False
+    assert middle["pump_on"] is False
+    assert "inside target band" in middle["reason"]
+    assert state.low_reading_count == 1
+    assert third["pump_on"] is False
+    assert "waiting for 2 confirmations" in third["reason"]
+
+
+def test_hard_wet_cutoff_resets_low_reading_count():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = controller.initialize_state(reservoir_ml=200.0)
+
+    controller.step(
+        "golden_pothos",
+        0.1,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+    result = controller.step(
+        "golden_pothos",
+        0.3,
+        timestamp="2026-03-29T12:00:00+00:00",
+        state=state,
+    )
+
+    assert result["pump_on"] is False
+    assert "wet cutoff" in result["reason"]
+    assert state.low_reading_count == 0
+
+
+def test_daily_budget_blocks_same_day_watering():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = ControllerState(
+        reservoir_ml=200.0,
+        daily_dose_ml=240.0,
+        daily_dose_day="2026-03-29",
+    )
+
+    result = controller.step(
+        "peace_lily",
+        0.03,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+
+    assert result["pump_on"] is False
+    assert "Max daily fixed-dose budget reached" in result["reason"]
+
+
+def test_daily_rollover_resets_budget():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = ControllerState(
+        reservoir_ml=200.0,
+        daily_dose_ml=240.0,
+        daily_dose_day="2026-03-28",
+    )
+
+    result = controller.step(
+        "peace_lily",
+        0.03,
+        timestamp="2026-03-29T08:00:00+00:00",
+        state=state,
+    )
+
+    assert result["pump_on"] is True
+    assert state.daily_dose_day == "2026-03-29"
+    assert state.daily_dose_ml == 60.0
+
+
 def test_manual_no_autowater_families():
     controller = BloomPotController(default_reservoir_ml=200.0)
 
     for plant_id in ("moth_orchid", "venus_fly_trap"):
         state = controller.initialize_state(reservoir_ml=200.0)
+        state.low_reading_count = 3
         result = controller.step(
             plant_id,
             0.01,
@@ -167,12 +395,72 @@ def test_manual_no_autowater_families():
 
         assert result["pump_on"] is False
         assert result["dose_ml"] == 0.0
-        assert "manual review required" in result["reason"]
+        assert "manual review" in result["reason"]
+        assert state.low_reading_count == 0
+
+
+@pytest.mark.parametrize(
+    "bad_timestamp",
+    [
+        "not-a-timestamp",
+        "2026-03-29T08:00:00",
+    ],
+)
+def test_malformed_timestamp_fails_loudly(bad_timestamp):
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(ValueError, match="timestamp"):
+        controller.step("peace_lily", 0.03, timestamp=bad_timestamp)
+
+
+@pytest.mark.parametrize("bad_soil_moisture", [-0.1, 101.0, float("nan"), True, "dry"])
+def test_invalid_soil_moisture_fails_loudly(bad_soil_moisture):
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(ValueError, match="soil_moisture"):
+        controller.step("peace_lily", bad_soil_moisture)
+
+
+@pytest.mark.parametrize(
+    "state_payload",
+    [
+        {"reservoir_ml": -1},
+        {"reservoir_ml": 200, "low_reading_count": -1},
+        {"reservoir_ml": 200, "last_watered_at": "bad-timestamp"},
+        {"reservoir_ml": 200, "daily_dose_ml": 5},
+        {"reservoir_ml": 200, "daily_dose_ml": 5, "daily_dose_day": "bad-day"},
+    ],
+)
+def test_invalid_state_fails_loudly(state_payload):
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(ValueError, match="state"):
+        controller.step(
+            "peace_lily",
+            0.03,
+            timestamp="2026-03-29T08:00:00+00:00",
+            state=state_payload,
+        )
+
+
+def test_unknown_plant_id_fails_loudly():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(KeyError, match="Unknown plant id"):
+        controller.step("missing_plant", 0.03)
+
+
+def test_unresolved_species_id_is_rejected_explicitly():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(KeyError, match="unresolved and not loadable"):
+        controller.step("christmas_cactus", 0.03)
 
 
 def test_invalid_plant_schema_fails_loudly(tmp_path):
     plant_path = tmp_path / "plant_facts.json"
     controller_path = tmp_path / "controller_profiles.json"
+    unresolved_path = tmp_path / "unresolved_species.json"
 
     write_json(
         plant_path,
@@ -199,133 +487,180 @@ def test_invalid_plant_schema_fails_loudly(tmp_path):
     )
     write_json(
         controller_path,
-        {
-            "soil_even_moist": {
-                "moisture_target": {"minimum": 0.18, "maximum": 0.28},
-                "hard_dry_cutoff": 0.05,
-                "hard_wet_cutoff": 0.38,
-                "watering_dose_ml": 60,
-                "cooldown_minutes": 360,
-                "confirm_low_readings": 1,
-                "max_daily_dose_ml": 240,
-                "sensor_model": "capacitive_soil_v1",
-                "substrate_type": "potting_mix",
-                "autowater_enabled": True,
-                "manual_review_reasons": [],
-            }
-        },
+        {"soil_even_moist": build_controller_profile()},
     )
+    write_json(unresolved_path, [])
 
     with pytest.raises(ModelValidationError, match="Schema validation failed"):
         BloomPotController(
             plant_facts_path=plant_path,
             controller_profiles_path=controller_path,
+            unresolved_species_path=unresolved_path,
         )
 
 
 def test_unknown_controller_family_reference_fails_loudly(tmp_path):
     plant_path = tmp_path / "plant_facts.json"
     controller_path = tmp_path / "controller_profiles.json"
+    unresolved_path = tmp_path / "unresolved_species.json"
 
     write_json(
         plant_path,
-        [
-            {
-                "id": "test_plant",
-                "common_name": "Test Plant",
-                "scientific_name": "Testus plantus",
-                "legacy_category": "tropical",
-                "legacy_light_preference_lux": 1000,
-                "legacy_water_preference": "evenly_moist",
-                "controller_family": "missing_family",
-                "controller_family_confidence": "legacy_rule_based",
-                "migration_status": "accepted_auto",
-                "special_handling": [],
-                "manual_review_reasons": [],
-                "provenance": {
-                    "source_file": "legacy.json",
-                    "source_type": "legacy_backup_record",
-                    "match_type": "exact_common_name_and_scientific_name",
-                },
-            }
-        ],
+        [build_plant_record(controller_family="missing_family")],
     )
     write_json(
         controller_path,
-        {
-            "soil_even_moist": {
-                "moisture_target": {"minimum": 0.18, "maximum": 0.28},
-                "hard_dry_cutoff": 0.05,
-                "hard_wet_cutoff": 0.38,
-                "watering_dose_ml": 60,
-                "cooldown_minutes": 360,
-                "confirm_low_readings": 1,
-                "max_daily_dose_ml": 240,
-                "sensor_model": "capacitive_soil_v1",
-                "substrate_type": "potting_mix",
-                "autowater_enabled": True,
-                "manual_review_reasons": [],
-            }
-        },
+        {"soil_even_moist": build_controller_profile()},
     )
+    write_json(unresolved_path, [])
 
     with pytest.raises(ModelValidationError, match="unknown controller family"):
         BloomPotController(
             plant_facts_path=plant_path,
             controller_profiles_path=controller_path,
+            unresolved_species_path=unresolved_path,
         )
 
 
 def test_invalid_controller_profile_thresholds_fail_loudly(tmp_path):
-    plant_path = tmp_path / "plant_facts.json"
     controller_path = tmp_path / "controller_profiles.json"
+    plant_path = tmp_path / "plant_facts.json"
+    unresolved_path = tmp_path / "unresolved_species.json"
 
-    write_json(
-        plant_path,
-        [
-            {
-                "id": "test_plant",
-                "common_name": "Test Plant",
-                "scientific_name": "Testus plantus",
-                "legacy_category": "tropical",
-                "legacy_light_preference_lux": 1000,
-                "legacy_water_preference": "evenly_moist",
-                "controller_family": "soil_even_moist",
-                "controller_family_confidence": "legacy_rule_based",
-                "migration_status": "accepted_auto",
-                "special_handling": [],
-                "manual_review_reasons": [],
-                "provenance": {
-                    "source_file": "legacy.json",
-                    "source_type": "legacy_backup_record",
-                    "match_type": "exact_common_name_and_scientific_name",
-                },
-            }
-        ],
-    )
+    write_json(plant_path, [build_plant_record()])
     write_json(
         controller_path,
         {
-            "soil_even_moist": {
-                "moisture_target": {"minimum": 0.04, "maximum": 0.28},
-                "hard_dry_cutoff": 0.05,
-                "hard_wet_cutoff": 0.38,
-                "watering_dose_ml": 60,
-                "cooldown_minutes": 360,
-                "confirm_low_readings": 1,
-                "max_daily_dose_ml": 240,
-                "sensor_model": "capacitive_soil_v1",
-                "substrate_type": "potting_mix",
-                "autowater_enabled": True,
-                "manual_review_reasons": [],
-            }
+            "soil_even_moist": build_controller_profile(
+                moisture_target={"minimum": 0.04, "maximum": 0.28}
+            )
         },
     )
+    write_json(unresolved_path, [])
 
     with pytest.raises(ModelValidationError, match="inconsistent moisture thresholds"):
         BloomPotController(
             plant_facts_path=plant_path,
             controller_profiles_path=controller_path,
+            unresolved_species_path=unresolved_path,
+        )
+
+
+@pytest.mark.parametrize(
+    ("profile_overrides", "expected_error"),
+    [
+        (
+            {"watering_dose_ml": 80, "max_daily_dose_ml": 60},
+            "watering_dose_ml greater than max_daily_dose_ml",
+        ),
+        (
+            {"autowater_enabled": True, "manual_review_reasons": ["needs_manual_review"]},
+            "manual review reasons while autowater_enabled is true",
+        ),
+    ],
+)
+def test_controller_profile_invariants_fail_loudly(
+    tmp_path,
+    profile_overrides,
+    expected_error,
+):
+    plant_path = tmp_path / "plant_facts.json"
+    controller_path = tmp_path / "controller_profiles.json"
+    unresolved_path = tmp_path / "unresolved_species.json"
+
+    write_json(plant_path, [build_plant_record()])
+    write_json(
+        controller_path,
+        {"soil_even_moist": build_controller_profile(**profile_overrides)},
+    )
+    write_json(unresolved_path, [])
+
+    with pytest.raises(ModelValidationError, match=expected_error):
+        BloomPotController(
+            plant_facts_path=plant_path,
+            controller_profiles_path=controller_path,
+            unresolved_species_path=unresolved_path,
+        )
+
+
+def test_accepted_auto_records_cannot_carry_manual_review_only_tags(tmp_path):
+    with pytest.raises(ModelValidationError, match="manual-review-only tags"):
+        make_controller(
+            tmp_path,
+            plant_records=[
+                build_plant_record(
+                    special_handling=["manual_review_required"],
+                    manual_review_reasons=["legacy_category_orchid_requires_manual_review"],
+                )
+            ],
+        )
+
+
+def test_accepted_manual_records_require_manual_review_reason(tmp_path):
+    with pytest.raises(ModelValidationError, match="at least one manual review reason"):
+        make_controller(
+            tmp_path,
+            plant_records=[
+                build_plant_record(
+                    migration_status="accepted_manual",
+                    controller_family_confidence="manual_review",
+                    special_handling=["manual_review_required"],
+                    manual_review_reasons=[],
+                    controller_family="orchid_bark",
+                )
+            ],
+            controller_profiles={
+                "orchid_bark": build_controller_profile(
+                    autowater_enabled=False,
+                    manual_review_reasons=["substrate_specific_autowatering_not_validated"],
+                )
+            },
+        )
+
+
+def test_accepted_auto_records_must_reference_autowater_enabled_families(tmp_path):
+    with pytest.raises(ModelValidationError, match="Accepted auto plant record"):
+        make_controller(
+            tmp_path,
+            plant_records=[build_plant_record(controller_family="orchid_bark")],
+            controller_profiles={
+                "orchid_bark": build_controller_profile(
+                    autowater_enabled=False,
+                    manual_review_reasons=["substrate_specific_autowatering_not_validated"],
+                )
+            },
+        )
+
+
+def test_accepted_manual_records_must_reference_manual_review_families(tmp_path):
+    with pytest.raises(ModelValidationError, match="Accepted manual plant record"):
+        make_controller(
+            tmp_path,
+            plant_records=[
+                build_plant_record(
+                    migration_status="accepted_manual",
+                    controller_family_confidence="manual_review",
+                    special_handling=["manual_review_required"],
+                    manual_review_reasons=["legacy_category_orchid_requires_manual_review"],
+                )
+            ],
+        )
+
+
+def test_unresolved_species_cannot_overlap_with_plant_facts(tmp_path):
+    with pytest.raises(ModelValidationError, match="overlap"):
+        make_controller(
+            tmp_path,
+            plant_records=[build_plant_record(id="duplicate_id")],
+            unresolved_species=[build_unresolved_record(id="duplicate_id")],
+        )
+
+
+def test_unresolved_species_file_cannot_be_loaded_as_plant_facts():
+    with pytest.raises(ModelValidationError, match="Schema validation failed"):
+        BloomPotController(
+            plant_facts_path=UNRESOLVED_SPECIES_PATH,
+            unresolved_species_path=UNRESOLVED_SPECIES_PATH,
         )
 
 
@@ -346,23 +681,7 @@ def test_unresolved_species_file_shape():
 
 
 def test_controller_family_confidence_enum_handling():
-    base_record = {
-        "id": "test_plant",
-        "common_name": "Test Plant",
-        "scientific_name": "Testus plantus",
-        "legacy_category": "tropical",
-        "legacy_light_preference_lux": 1000,
-        "legacy_water_preference": "evenly_moist",
-        "controller_family": "soil_even_moist",
-        "migration_status": "accepted_auto",
-        "special_handling": [],
-        "manual_review_reasons": [],
-        "provenance": {
-            "source_file": "legacy.json",
-            "source_type": "legacy_backup_record",
-            "match_type": "exact_common_name_and_scientific_name",
-        },
-    }
+    base_record = build_plant_record()
 
     for confidence in ("legacy_direct", "legacy_rule_based", "manual_review"):
         payload = [{**base_record, "controller_family_confidence": confidence}]
@@ -373,23 +692,7 @@ def test_controller_family_confidence_enum_handling():
 
 
 def test_migration_status_enum_handling():
-    base_record = {
-        "id": "test_plant",
-        "common_name": "Test Plant",
-        "scientific_name": "Testus plantus",
-        "legacy_category": "tropical",
-        "legacy_light_preference_lux": 1000,
-        "legacy_water_preference": "evenly_moist",
-        "controller_family": "soil_even_moist",
-        "controller_family_confidence": "legacy_rule_based",
-        "special_handling": [],
-        "manual_review_reasons": [],
-        "provenance": {
-            "source_file": "legacy.json",
-            "source_type": "legacy_backup_record",
-            "match_type": "exact_common_name_and_scientific_name",
-        },
-    }
+    base_record = build_plant_record()
 
     for status in ("accepted_auto", "accepted_manual"):
         payload = [{**base_record, "migration_status": status}]
@@ -397,6 +700,28 @@ def test_migration_status_enum_handling():
 
     invalid_payload = [{**base_record, "migration_status": "unresolved"}]
     assert validate_schema(invalid_payload, PLANT_FACTS_SCHEMA_PATH)
+
+
+def test_catalog_controller_consistency():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    accepted_manual_ids = []
+    for plant_id, record in controller.plant_facts.items():
+        profile = controller.controller_profiles[record["controller_family"]]
+        if record["migration_status"] == "accepted_auto":
+            assert "manual_review_required" not in record["special_handling"]
+            assert record["manual_review_reasons"] == []
+            assert record["controller_family_confidence"] != "manual_review"
+            assert profile["autowater_enabled"] is True
+        else:
+            accepted_manual_ids.append(plant_id)
+            assert record["migration_status"] == "accepted_manual"
+            assert "manual_review_required" in record["special_handling"]
+            assert record["manual_review_reasons"]
+            assert record["controller_family_confidence"] == "manual_review"
+            assert profile["autowater_enabled"] is False
+
+    assert len(accepted_manual_ids) == 10
 
 
 def test_no_accepted_plant_record_missing_controller_family():
