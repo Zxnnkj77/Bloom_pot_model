@@ -8,10 +8,30 @@
 
 `bloom_controller.py` validates both JSON files against those schemas, enforces cross-file consistency, then runs the persistent watering controller. It keeps state such as reservoir level, low-reading confirmations, last watering time, and daily dose usage, then returns a pump decision with an explicit reason.
 
+It also exposes `simulate_scenario(...)` for deterministic scenario replay from ordered timestamped moisture readings, returning a full per-step trace and final controller state.
+
 `DATA_MODEL_AUDIT.md` summarizes the schema audit, the field splits and removals, and the unresolved provenance limits that remain.
 
 Run the tests with:
 
 ```bash
 pytest -q
+```
+
+Run a scenario replay from Python with:
+
+```python
+from bloom_controller import BloomPotController
+
+controller = BloomPotController()
+scenario = controller.simulate_scenario(
+    "peace_lily",
+    [
+        {"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.04},
+        {"timestamp": "2026-03-29T14:00:00+00:00", "soil_moisture": 0.20},
+    ],
+    initial_reservoir_ml=200.0,
+)
+
+print(scenario["trace"])
 ```

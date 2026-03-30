@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
 
@@ -138,6 +138,75 @@ class BloomPotController:
         state: ControllerState | dict[str, Any] | None = None,
         reservoir_ml: float | None = None,
     ) -> dict[str, Any]:
+        current_state = self._coerce_state(state, reservoir_ml=reservoir_ml)
+        evaluation = self._evaluate_step(
+            plant_id,
+            soil_moisture,
+            timestamp=timestamp,
+            state=current_state,
+        )
+
+        return {
+            "timestamp": evaluation["timestamp"],
+            "plant_id": plant_id,
+            "controller_family": evaluation["controller_family"],
+            "pump_on": evaluation["pump_on"],
+            "dose_ml": evaluation["dose_ml"],
+            "reason": evaluation["reason"],
+            "state": current_state.to_dict(),
+            "soil_moisture": evaluation["normalized_soil_moisture"],
+            "target_band": evaluation["target_band"],
+        }
+
+    def simulate_scenario(
+        self,
+        plant_id: str,
+        readings: Iterable[dict[str, Any]],
+        *,
+        initial_state: ControllerState | dict[str, Any] | None = None,
+        initial_reservoir_ml: float | None = None,
+    ) -> dict[str, Any]:
+        scenario_state = self._clone_state(
+            initial_state,
+            reservoir_ml=initial_reservoir_ml,
+        )
+        trace: list[dict[str, Any]] = []
+        previous_time: datetime | None = None
+
+        for index, reading in enumerate(readings):
+            if "timestamp" not in reading:
+                raise KeyError(f"Reading {index} is missing timestamp.")
+            if "soil_moisture" not in reading:
+                raise KeyError(f"Reading {index} is missing soil_moisture.")
+
+            current_time = _parse_timestamp(reading["timestamp"])
+            if previous_time is not None and current_time < previous_time:
+                raise ValueError("Scenario readings must be ordered by timestamp.")
+
+            trace.append(
+                self._evaluate_step(
+                    plant_id,
+                    float(reading["soil_moisture"]),
+                    timestamp=current_time,
+                    state=scenario_state,
+                )
+            )
+            previous_time = current_time
+
+        return {
+            "plant_id": plant_id,
+            "trace": trace,
+            "final_state": scenario_state.to_dict(),
+        }
+
+    def _evaluate_step(
+        self,
+        plant_id: str,
+        soil_moisture: float,
+        *,
+        timestamp: str | datetime | None,
+        state: ControllerState,
+    ) -> dict[str, Any]:
         if plant_id not in self.plant_facts:
             raise KeyError(f"Unknown plant id: {plant_id}")
 
@@ -145,47 +214,54 @@ class BloomPotController:
         family = plant["controller_family"]
         profile = self.controller_profiles[family]
         current_time = _parse_timestamp(timestamp)
-        current_state = self._coerce_state(state, reservoir_ml=reservoir_ml)
         soil_value = _normalize_soil_moisture(soil_moisture)
+        lower_target = float(profile["moisture_target"]["minimum"])
+        upper_target = float(profile["moisture_target"]["maximum"])
 
-        self._roll_daily_window(current_state, current_time)
+        trace = {
+            "timestamp": current_time.isoformat(),
+            "plant_id": plant_id,
+            "controller_family": family,
+            "input_soil_moisture": soil_moisture,
+            "normalized_soil_moisture": round(soil_value, 3),
+            "reservoir_ml_before": round(state.reservoir_ml, 3),
+            "low_reading_count_before": state.low_reading_count,
+            "daily_dose_ml_before": round(state.daily_dose_ml, 3),
+            "daily_dose_day_before": state.daily_dose_day,
+            "target_band": [lower_target, upper_target],
+        }
+
+        self._roll_daily_window(state, current_time)
 
         reasons: list[str] = []
         decision = False
         dose_ml = 0.0
-        lower_target = float(profile["moisture_target"]["minimum"])
-        upper_target = float(profile["moisture_target"]["maximum"])
         autowater_enabled = profile["autowater_enabled"]
 
         if not autowater_enabled:
-            current_state.low_reading_count = 0
+            state.low_reading_count = 0
             reasons.append(
                 "Autowatering disabled for this controller family; manual review required."
             )
         elif soil_value >= profile["hard_wet_cutoff"]:
-            current_state.low_reading_count = 0
+            state.low_reading_count = 0
             reasons.append(
                 f"Soil moisture {soil_value:.2f} is at or above wet cutoff "
                 f"{profile['hard_wet_cutoff']:.2f}; no watering."
             )
         else:
             reading_is_low = soil_value < lower_target
-            current_state.low_reading_count = (
-                current_state.low_reading_count + 1 if reading_is_low else 0
-            )
+            state.low_reading_count = state.low_reading_count + 1 if reading_is_low else 0
 
-            if current_state.reservoir_ml < profile["watering_dose_ml"]:
+            if state.reservoir_ml < profile["watering_dose_ml"]:
                 reasons.append(
                     "Reservoir does not contain the fixed watering dose; refill required."
                 )
-            elif self._cooldown_active(current_state, current_time, profile["cooldown_minutes"]):
+            elif self._cooldown_active(state, current_time, profile["cooldown_minutes"]):
                 reasons.append(
                     f"Cooldown active for {profile['cooldown_minutes']} minutes after the last dose."
                 )
-            elif (
-                current_state.daily_dose_ml + profile["watering_dose_ml"]
-                > profile["max_daily_dose_ml"]
-            ):
+            elif state.daily_dose_ml + profile["watering_dose_ml"] > profile["max_daily_dose_ml"]:
                 reasons.append("Max daily fixed-dose budget reached; no watering.")
             elif soil_value <= profile["hard_dry_cutoff"]:
                 decision = True
@@ -195,11 +271,11 @@ class BloomPotController:
                     f"{profile['hard_dry_cutoff']:.2f}; fixed dose approved."
                 )
             elif reading_is_low:
-                if current_state.low_reading_count >= profile["confirm_low_readings"]:
+                if state.low_reading_count >= profile["confirm_low_readings"]:
                     decision = True
                     dose_ml = float(profile["watering_dose_ml"])
                     reasons.append(
-                        f"Confirmed {current_state.low_reading_count} consecutive low readings "
+                        f"Confirmed {state.low_reading_count} consecutive low readings "
                         f"below target band floor {lower_target:.2f}; fixed dose approved."
                     )
                 else:
@@ -219,21 +295,25 @@ class BloomPotController:
                 )
 
         if decision:
-            current_state.reservoir_ml -= dose_ml
-            current_state.daily_dose_ml += dose_ml
-            current_state.last_watered_at = current_time.isoformat()
-            current_state.low_reading_count = 0
+            state.reservoir_ml -= dose_ml
+            state.daily_dose_ml += dose_ml
+            state.last_watered_at = current_time.isoformat()
+            state.low_reading_count = 0
 
-        return {
-            "plant_id": plant_id,
-            "controller_family": family,
-            "pump_on": decision,
-            "dose_ml": dose_ml,
-            "reason": " ".join(reasons),
-            "state": current_state.to_dict(),
-            "soil_moisture": round(soil_value, 3),
-            "target_band": [lower_target, upper_target],
-        }
+        trace.update(
+            {
+                "pump_on": decision,
+                "dose_ml": dose_ml,
+                "reason": " ".join(reasons),
+                "reservoir_ml_after": round(state.reservoir_ml, 3),
+                "low_reading_count_after": state.low_reading_count,
+                "daily_dose_ml_after": round(state.daily_dose_ml, 3),
+                "daily_dose_day_after": state.daily_dose_day,
+                "last_watered_at_after": state.last_watered_at,
+                "state_after": state.to_dict(),
+            }
+        )
+        return trace
 
     def _coerce_state(
         self,
@@ -251,6 +331,23 @@ class BloomPotController:
         if reservoir_ml is not None:
             current_state.reservoir_ml = float(reservoir_ml)
         return current_state
+
+    def _clone_state(
+        self,
+        state: ControllerState | dict[str, Any] | None,
+        *,
+        reservoir_ml: float | None,
+    ) -> ControllerState:
+        if isinstance(state, ControllerState):
+            payload = state.to_dict()
+        else:
+            payload = dict(state or {})
+        if reservoir_ml is not None:
+            payload["reservoir_ml"] = float(reservoir_ml)
+        return ControllerState.from_dict(
+            payload,
+            default_reservoir_ml=self.default_reservoir_ml,
+        )
 
     @staticmethod
     def _roll_daily_window(state: ControllerState, current_time: datetime) -> None:

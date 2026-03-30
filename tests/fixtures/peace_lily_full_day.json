@@ -1,0 +1,86 @@
+{
+  "plant_id": "peace_lily",
+  "initial_reservoir_ml": 240.0,
+  "readings": [
+    {
+      "timestamp": "2026-03-29T00:00:00+00:00",
+      "soil_moisture": 0.5
+    },
+    {
+      "timestamp": "2026-03-29T06:00:00+00:00",
+      "soil_moisture": 0.04
+    },
+    {
+      "timestamp": "2026-03-29T09:00:00+00:00",
+      "soil_moisture": 0.17
+    },
+    {
+      "timestamp": "2026-03-29T12:00:00+00:00",
+      "soil_moisture": 0.17
+    },
+    {
+      "timestamp": "2026-03-29T18:00:00+00:00",
+      "soil_moisture": 0.4
+    },
+    {
+      "timestamp": "2026-03-29T21:00:00+00:00",
+      "soil_moisture": 0.03
+    },
+    {
+      "timestamp": "2026-03-29T23:00:00+00:00",
+      "soil_moisture": 0.03
+    }
+  ],
+  "expected_pump_on": [
+    false,
+    true,
+    false,
+    true,
+    false,
+    true,
+    false
+  ],
+  "expected_reservoir_after": [
+    240.0,
+    180.0,
+    180.0,
+    120.0,
+    120.0,
+    60.0,
+    60.0
+  ],
+  "expected_daily_dose_after": [
+    0.0,
+    60.0,
+    60.0,
+    120.0,
+    120.0,
+    180.0,
+    180.0
+  ],
+  "expected_low_reading_count_after": [
+    0,
+    0,
+    1,
+    0,
+    0,
+    0,
+    1
+  ],
+  "expected_reasons": [
+    "Soil moisture 0.50 is at or above wet cutoff 0.38; no watering.",
+    "Soil moisture 0.04 is at or below hard dry cutoff 0.05; fixed dose approved.",
+    "Cooldown active for 360 minutes after the last dose.",
+    "Confirmed 2 consecutive low readings below target band floor 0.18; fixed dose approved.",
+    "Soil moisture 0.40 is at or above wet cutoff 0.38; no watering.",
+    "Soil moisture 0.03 is at or below hard dry cutoff 0.05; fixed dose approved.",
+    "Cooldown active for 360 minutes after the last dose."
+  ],
+  "expected_final_state": {
+    "reservoir_ml": 60.0,
+    "low_reading_count": 1,
+    "last_watered_at": "2026-03-29T21:00:00+00:00",
+    "daily_dose_ml": 180.0,
+    "daily_dose_day": "2026-03-29"
+  }
+}
