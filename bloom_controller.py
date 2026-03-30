@@ -251,7 +251,8 @@ class BloomPotController:
             )
         else:
             reading_is_low = soil_value < lower_target
-            state.low_reading_count = state.low_reading_count + 1 if reading_is_low else 0
+            if not reading_is_low:
+                state.low_reading_count = 0
 
             if state.reservoir_ml < profile["watering_dose_ml"]:
                 reasons.append(
@@ -271,6 +272,7 @@ class BloomPotController:
                     f"{profile['hard_dry_cutoff']:.2f}; fixed dose approved."
                 )
             elif reading_is_low:
+                state.low_reading_count += 1
                 if state.low_reading_count >= profile["confirm_low_readings"]:
                     decision = True
                     dose_ml = float(profile["watering_dose_ml"])

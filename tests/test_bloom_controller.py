@@ -356,6 +356,91 @@ def test_simulate_scenario_confirm_low_readings_across_multiple_readings():
     assert "Confirmed 2 consecutive low readings" in second["reason"]
 
 
+def test_simulate_scenario_cooldown_blocked_low_reading_does_not_increment_confirmation_count():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    scenario = controller.simulate_scenario(
+        "golden_pothos",
+        [
+            {"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.04},
+            {"timestamp": "2026-03-29T09:00:00+00:00", "soil_moisture": 0.10},
+            {"timestamp": "2026-03-29T21:00:00+00:00", "soil_moisture": 0.10},
+            {"timestamp": "2026-03-30T10:00:00+00:00", "soil_moisture": 0.10},
+        ],
+        initial_reservoir_ml=200.0,
+    )
+
+    trace = scenario["trace"]
+    assert [step["pump_on"] for step in trace] == [True, False, False, True]
+    assert trace[1]["low_reading_count_before"] == 0
+    assert trace[1]["low_reading_count_after"] == 0
+    assert "Cooldown active" in trace[1]["reason"]
+    assert trace[2]["low_reading_count_before"] == 0
+    assert trace[2]["low_reading_count_after"] == 1
+    assert "waiting for 2 confirmations" in trace[2]["reason"]
+    assert trace[3]["low_reading_count_before"] == 1
+    assert "Confirmed 2 consecutive low readings" in trace[3]["reason"]
+
+
+def test_simulate_scenario_reservoir_blocked_low_reading_does_not_increment_confirmation_count():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    scenario = controller.simulate_scenario(
+        "golden_pothos",
+        [{"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.10}],
+        initial_state={"reservoir_ml": 40.0, "low_reading_count": 1},
+    )
+
+    trace = scenario["trace"]
+    assert trace[0]["pump_on"] is False
+    assert trace[0]["low_reading_count_before"] == 1
+    assert trace[0]["low_reading_count_after"] == 1
+    assert "Reservoir does not contain the fixed watering dose" in trace[0]["reason"]
+
+
+def test_simulate_scenario_max_daily_budget_blocked_low_reading_does_not_increment_confirmation_count():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    scenario = controller.simulate_scenario(
+        "golden_pothos",
+        [{"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.10}],
+        initial_state={
+            "reservoir_ml": 200.0,
+            "low_reading_count": 1,
+            "daily_dose_ml": 150.0,
+            "daily_dose_day": "2026-03-29",
+        },
+    )
+
+    trace = scenario["trace"]
+    assert trace[0]["pump_on"] is False
+    assert trace[0]["low_reading_count_before"] == 1
+    assert trace[0]["low_reading_count_after"] == 1
+    assert "Max daily fixed-dose budget reached" in trace[0]["reason"]
+
+
+def test_simulate_scenario_eligible_low_readings_still_increment_and_confirm_correctly():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    scenario = controller.simulate_scenario(
+        "golden_pothos",
+        [
+            {"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.10},
+            {"timestamp": "2026-03-29T21:00:00+00:00", "soil_moisture": 0.10},
+        ],
+        initial_reservoir_ml=200.0,
+    )
+
+    trace = scenario["trace"]
+    assert trace[0]["pump_on"] is False
+    assert trace[0]["low_reading_count_before"] == 0
+    assert trace[0]["low_reading_count_after"] == 1
+    assert trace[1]["pump_on"] is True
+    assert trace[1]["low_reading_count_before"] == 1
+    assert trace[1]["low_reading_count_after"] == 0
+    assert "Confirmed 2 consecutive low readings" in trace[1]["reason"]
+
+
 def test_simulate_scenario_low_reading_reset_after_recovery():
     controller = BloomPotController(default_reservoir_ml=200.0)
 
