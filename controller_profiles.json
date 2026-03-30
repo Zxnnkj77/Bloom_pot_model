@@ -1,0 +1,102 @@
+{
+  "soil_even_moist": {
+    "moisture_target": {
+      "minimum": 0.18,
+      "maximum": 0.28
+    },
+    "hard_dry_cutoff": 0.05,
+    "hard_wet_cutoff": 0.38,
+    "watering_dose_ml": 60,
+    "cooldown_minutes": 360,
+    "confirm_low_readings": 1,
+    "max_daily_dose_ml": 240,
+    "sensor_model": "capacitive_soil_v1",
+    "substrate_type": "potting_mix",
+    "autowater_enabled": true,
+    "manual_review_reasons": []
+  },
+  "soil_dry_between": {
+    "moisture_target": {
+      "minimum": 0.12,
+      "maximum": 0.22
+    },
+    "hard_dry_cutoff": 0.05,
+    "hard_wet_cutoff": 0.3,
+    "watering_dose_ml": 50,
+    "cooldown_minutes": 720,
+    "confirm_low_readings": 2,
+    "max_daily_dose_ml": 150,
+    "sensor_model": "capacitive_soil_v1",
+    "substrate_type": "potting_mix",
+    "autowater_enabled": true,
+    "manual_review_reasons": []
+  },
+  "succulent_fast_drain": {
+    "moisture_target": {
+      "minimum": 0.05,
+      "maximum": 0.12
+    },
+    "hard_dry_cutoff": 0.02,
+    "hard_wet_cutoff": 0.18,
+    "watering_dose_ml": 35,
+    "cooldown_minutes": 1440,
+    "confirm_low_readings": 2,
+    "max_daily_dose_ml": 70,
+    "sensor_model": "capacitive_fast_drain_v1",
+    "substrate_type": "fast_drain_mix",
+    "autowater_enabled": true,
+    "manual_review_reasons": []
+  },
+  "fern_high_moisture": {
+    "moisture_target": {
+      "minimum": 0.28,
+      "maximum": 0.38
+    },
+    "hard_dry_cutoff": 0.1,
+    "hard_wet_cutoff": 0.48,
+    "watering_dose_ml": 70,
+    "cooldown_minutes": 240,
+    "confirm_low_readings": 1,
+    "max_daily_dose_ml": 280,
+    "sensor_model": "capacitive_high_moisture_v1",
+    "substrate_type": "moisture_retentive_mix",
+    "autowater_enabled": true,
+    "manual_review_reasons": []
+  },
+  "orchid_bark": {
+    "moisture_target": {
+      "minimum": 0.18,
+      "maximum": 0.3
+    },
+    "hard_dry_cutoff": 0.05,
+    "hard_wet_cutoff": 0.4,
+    "watering_dose_ml": 40,
+    "cooldown_minutes": 720,
+    "confirm_low_readings": 2,
+    "max_daily_dose_ml": 80,
+    "sensor_model": "capacitive_bark_v1",
+    "substrate_type": "orchid_bark",
+    "autowater_enabled": false,
+    "manual_review_reasons": [
+      "substrate_specific_autowatering_not_validated"
+    ]
+  },
+  "bog_carnivorous": {
+    "moisture_target": {
+      "minimum": 0.35,
+      "maximum": 0.5
+    },
+    "hard_dry_cutoff": 0.15,
+    "hard_wet_cutoff": 0.6,
+    "watering_dose_ml": 60,
+    "cooldown_minutes": 360,
+    "confirm_low_readings": 1,
+    "max_daily_dose_ml": 180,
+    "sensor_model": "capacitive_bog_v1",
+    "substrate_type": "bog_mix",
+    "autowater_enabled": false,
+    "manual_review_reasons": [
+      "bog_water_quality_requirements_not_validated"
+    ]
+  }
+}

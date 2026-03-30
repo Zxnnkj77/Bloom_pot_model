@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "controller_profiles.schema.json",
+  "title": "Bloom Pot Controller Profiles",
+  "type": "object",
+  "propertyNames": {
+    "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+  },
+  "additionalProperties": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "moisture_target",
+      "hard_dry_cutoff",
+      "hard_wet_cutoff",
+      "watering_dose_ml",
+      "cooldown_minutes",
+      "confirm_low_readings",
+      "max_daily_dose_ml",
+      "sensor_model",
+      "substrate_type",
+      "autowater_enabled",
+      "manual_review_reasons"
+    ],
+    "properties": {
+      "moisture_target": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "minimum",
+          "maximum"
+        ],
+        "properties": {
+          "minimum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "maximum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      },
+      "hard_dry_cutoff": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "hard_wet_cutoff": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "watering_dose_ml": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "cooldown_minutes": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "confirm_low_readings": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "max_daily_dose_ml": {
+        "type": "number",
+        "exclusiveMinimum": 0
+      },
+      "sensor_model": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "substrate_type": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "autowater_enabled": {
+        "type": "boolean"
+      },
+      "manual_review_reasons": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "uniqueItems": true
+      }
+    }
+  }
+}

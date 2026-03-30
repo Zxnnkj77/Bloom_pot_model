@@ -1,0 +1,528 @@
+import math
+
+class BloomPotModel:
+    """
+    Dynamic model for BloomPot based on:
+      - nonlinear soil moisture behavior
+      - moisture-dependent evapotranspiration (ET)
+      - environmental scaling by temperature & humidity
+      - water, temperature, and light stress
+      - automatic watering logic
+      - human-friendly recommendations
+    """
+
+    def __init__(self, profile, pot_volume_liters=2.0):
+        """
+        profile contains species-specific parameters:
+            - theta_wp: wilting point        (0–1)
+            - theta_fc: field capacity       (0–1)
+            - theta_crit: critical moisture  (0–1)
+            - W_min: sensor threshold for irrigation
+            - T_opt, T_min, T_max
+            - L_min
+            - k_w, k_r_w : water-stress parameters
+            - k_T, k_r_T : temperature-stress parameters
+            - k_L, k_r_L : light-stress parameters
+            - p : exponent for nonlinear water stress
+            - alpha_evap: fraction of ET that is soil evaporation
+            - E_max: max ET rate (per hour)
+            - c_T, c_H : temperature/humidity sensitivity
+            - S_max: stress saturation limit
+            - k_sat, tau_sat: waterlogging parameters
+            - Q : pump flow (L/hr)
+            - n_retention : exponent for nonlinear retention
+            - W_init, R_init : initial states
+        """
+
+        self.p = profile
+
+        # State variables
+        self.W = profile.get("W_init", 0.40)                  # soil moisture fraction (0–1)
+        self.R = profile.get("R_init", pot_volume_liters)     # reservoir water (L)
+        self.S = 0.0                                          # total stress
+        self.S_water = 0.0
+        self.S_temp = 0.0
+        self.S_light = 0.0
+
+        self.time_above_fc = 0.0  # hours above field capacity
+        self.V_pot = pot_volume_liters
+
+    # ----------------------------------------------------------
+    # Soil physics
+    # ----------------------------------------------------------
+
+    def available_moisture(self):
+        """
+        Normalized available moisture in [0,1]:
+        Wavail = (W - wp)/(fc - wp), clamped to [0,1].
+        """
+        W, p = self.W, self.p
+        wp, fc = p["theta_wp"], p["theta_fc"]
+
+        if W <= wp:
+            return 0.0
+        return min(1.0, (W - wp) / (fc - wp))
+
+    def Ks(self):
+        """
+        FAO-style reduction factor for water stress:
+        Ks = 1 above theta_crit, linear drop to 0 at theta_wp.
+        """
+        W = self.W
+        wp, fc, crit = self.p["theta_wp"], self.p["theta_fc"], self.p["theta_crit"]
+
+        if W <= wp:
+            return 0.0
+        if W >= crit:
+            return 1.0
+        return (W - wp) / (crit - wp)
+
+    # ----------------------------------------------------------
+    # Environmental scaling
+    # ----------------------------------------------------------
+
+    def environmental_multiplier(self, T, H):
+        """
+        Scale ET by deviation from optimal temperature and humidity.
+        """
+        p = self.p
+        eta_T = max(0.0, 1 + p["c_T"] * (T - p["T_opt"]))
+        eta_H = max(0.0, 1 + p["c_H"] * (60 - H))   # 60% as reference humidity
+        return eta_T * eta_H
+
+    def evapotranspiration(self, T, H):
+        """
+        ET = E_max * env * [alpha*W_eff + (1-alpha)*Ks]
+        Combines soil moisture and plant transpiration response.
+        """
+        p = self.p
+        env = self.environmental_multiplier(T, H)
+
+        Wavail = self.available_moisture()
+        W_eff = Wavail ** p["n_retention"]   # nonlinear soil retention curve
+        Ks_val = self.Ks()
+
+        evap = p["alpha_evap"] * W_eff + (1 - p["alpha_evap"]) * Ks_val
+        return p["E_max"] * env * evap
+
+    # ----------------------------------------------------------
+    # Irrigation
+    # ----------------------------------------------------------
+
+    def irrigation_input(self, pump_on):
+        """
+        Convert pump flow Q (L/hr) into equivalent soil moisture increment.
+        """
+        if pump_on and self.R > 0:
+            return self.p["Q"] / self.V_pot
+        return 0.0
+
+    # ----------------------------------------------------------
+    # Stress dynamics
+    # ----------------------------------------------------------
+
+    def update_stress(self, T, L, dt):
+        """
+        Update water, temperature, and light stress, then total stress S.
+        """
+        p = self.p
+
+        # Water stress
+        deficit = max(0.0, p["theta_crit"] - self.W)
+        dS_w = p["k_w"] * (deficit ** p["p"]) - p["k_r_w"] * self.S_water
+        self.S_water = max(0.0, self.S_water + dS_w * dt)
+
+        # Temperature stress
+        temp_dev = max(0, T - p["T_max"]) + max(0, p["T_min"] - T)
+        dS_t = p["k_T"] * temp_dev - p["k_r_T"] * self.S_temp
+        self.S_temp = max(0.0, self.S_temp + dS_t * dt)
+
+        # Light stress
+        L_def = max(0.0, p["L_min"] - L)
+        dS_l = p["k_L"] * L_def - p["k_r_L"] * self.S_light
+        self.S_light = max(0.0, self.S_light + dS_l * dt)
+
+        # Total stress
+        self.S = min(self.S_water + self.S_temp + self.S_light, p["S_max"])
+
+    # ----------------------------------------------------------
+    # Waterlogging
+    # ----------------------------------------------------------
+
+    def update_waterlogging(self, dt):
+        """
+        If soil stays above field capacity for too long, add waterlogging stress.
+        """
+        p = self.p
+        if self.W >= p["theta_fc"]:
+            self.time_above_fc += dt
+            if self.time_above_fc >= p["tau_sat"]:
+                self.S_water += p["k_sat"] * dt
+        else:
+            self.time_above_fc = 0.0
+
+    # ----------------------------------------------------------
+    # Simulation update
+    # ----------------------------------------------------------
+
+    def update(self, T, H, L, pump_on, dt=1.0):
+        """
+        One integration step of length dt (hours).
+        """
+        # ET loss
+        ET = self.evapotranspiration(T, H)
+
+        # Irrigation input
+        I = self.irrigation_input(pump_on)
+
+        # Soil moisture update
+        dW = I - ET
+        self.W = max(0.0, min(self.p["theta_fc"], self.W + dW * dt))
+
+        # Reservoir update
+        if pump_on and self.R > 0:
+            self.R = max(0.0, self.R - self.p["Q"] * dt)
+
+        # Stress and waterlogging
+        self.update_stress(T, L, dt)
+        self.update_waterlogging(dt)
+
+    # ----------------------------------------------------------
+    # System status
+    # ----------------------------------------------------------
+
+    def status(self):
+        return {
+            "soil_moisture": self.W,
+            "reservoir_L": self.R,
+            "stress_total": self.S,
+            "stress_water": self.S_water,
+            "stress_temp": self.S_temp,
+            "stress_light": self.S_light,
+        }
+
+    # ----------------------------------------------------------
+    # RECOMMENDATION ENGINE 
+    # ----------------------------------------------------------
+
+    def recommend(self, T, L):
+        
+        p = self.p
+        rec = {}
+
+        # ---------- Water ----------
+        if self.W < p["theta_wp"]:
+            rec["water"] = "Your plant is really thirsty — give it water now! 💧"
+        elif self.W < p["theta_crit"]:
+            rec["water"] = "A bit dry — a watering soon would help."
+        elif self.W > p["theta_fc"]:
+            rec["water"] = "Looks like it's too wet — let the soil dry out."
+        else:
+            rec["water"] = "Moisture looks good! 👍"
+
+        # ---------- Light ----------
+        if L < p["L_min"] * 0.5:
+            rec["light"] = "It's very dark — try moving closer to a window. 🌤️"
+        elif L < p["L_min"]:
+            rec["light"] = "Could use a little more light. ☀️"
+        elif L > p["L_min"] * 3:
+            rec["light"] = "Too much light — some shade might help. 😎"
+        else:
+            rec["light"] = "Light levels look perfect! ✨"
+
+        # ---------- Temperature ----------
+        if T < p["T_min"]:
+            rec["temperature"] = "It's a bit chilly — try a warmer spot. ❄️"
+        elif T > p["T_max"]:
+            rec["temperature"] = "Your plant is overheating — shade/cooling helps. 🔥"
+        else:
+            rec["temperature"] = "Temperature is just right! 🌡️"
+
+        # ---------- Overall state ----------
+        S = self.S
+        if S < 0.2:
+            state = "Your plant is happy and thriving! 🌱"
+        elif S < 0.5:
+            state = "A little stressed, but doing okay. 🙂"
+        elif S < 0.8:
+            state = "Your plant is stressed — it needs some care. ⚠️"
+        else:
+            state = "Critical stress — take action soon! 🚨"
+
+        rec["overall_state"] = state
+        rec["stress_score"] = round(S, 3)
+
+        return rec
+
+    # ----------------------------------------------------------
+    # AUTONOMOUS WATERING DECISION (Model-Driven)
+    # ----------------------------------------------------------
+
+    def should_water(self):
+        """
+        Model-based watering decision using moisture thresholds and ET forecast.
+        """
+        p = self.p
+        W = self.W
+
+        # 1. Emergency: too dry (below wilting point)
+        if W < p["theta_wp"]:
+            return True, "Soil extremely dry — watering immediately."
+
+        # 2. Below critical threshold
+        if W < p["theta_crit"]:
+            return True, "Soil moisture is low — watering needed."
+
+        # 3. Anticipatory watering: simple ET forecast for next few hours
+        forecast_ET = p["E_max"] * 3  # 3-hour horizon, rough upper bound
+        if (W - p["theta_crit"]) < forecast_ET and W > p["theta_crit"]:
+            return True, "Moisture will drop soon — watering preemptively."
+
+        # 4. Reservoir empty: cannot water
+        if self.R <= 0:
+            return False, "Reservoir empty — please refill."
+
+        # 5. Too wet: definitely do NOT water
+        if W >= p["theta_fc"]:
+            return False, "Soil is already very wet — waiting to dry."
+
+        # Default: no watering
+        return False, "Moisture level OK — no watering needed now."
+
+    # ----------------------------------------------------------
+    # SENSOR-TRIGGERED STRATEGY (Hard Threshold Mode)
+    # ----------------------------------------------------------
+
+    def sensor_should_water(self):
+        """
+        Simple rule-based watering using a fixed moisture threshold W_min.
+        """
+        p = self.p
+        W = self.W
+
+        if W < p["W_min"]:
+            return True, "Sensor threshold crossed — watering triggered."
+        return False, "Sensor threshold OK."
+
+    # ----------------------------------------------------------
+    # FINAL WATERING DECISION: MERGE BOTH STRATEGIES
+    # ----------------------------------------------------------
+
+    def watering_controller(self):
+        """
+        Merge autonomous model-based logic and sensor threshold logic.
+        Autonomous logic has priority; sensor logic acts as backup trigger.
+        """
+        auto_decision, auto_msg = self.should_water()
+        sensor_decision, sensor_msg = self.sensor_should_water()
+
+        # Autonomous mode has priority
+        if auto_decision:
+            return True, auto_msg
+
+        # If autonomous mode says no, but sensor says yes → override
+        if sensor_decision:
+            return True, sensor_msg
+
+        # Neither mode wants to water
+        return False, "No watering needed."
+
+
+# ==========================================================
+# Example plant profile of Cherry Tomato
+# ==========================================================
+
+cherry_tomato_raw = {
+    "commonName": "Cherry Tomato",
+    "scientificName": "Solanum lycopersicum var. cerasiforme",
+    "category": "edible",
+    "lightPreference": 20000,
+    "waterPreference": "evenly_moist",
+    "thetaWp": 0.15,
+    "thetaCrit": 0.25,
+    "WMin": 0.08,
+    "LMin": 20000,
+    "kW": 0.30,
+    "kRW": 0.25,
+    "kT": 0.30,
+    "kRT": 0.20,
+    "kL": 0.30,
+    "kRL": 0.25,
+    "p": 1.0,
+    "alphaEvap": 0.20,
+    "EMax": 1.20,
+    "cT": 0.03,
+    "cH": 0.01,
+    "SMax": 1.0,
+    "kSat": 0.50,
+    "tauSat": 0.50,
+    "Q": 1.0,
+    "nRetention": 0.20,
+    "thetaFc": 1.0,
+    "WInit": 0.40,
+    "RInit": 1.5
+}
+
+
+# ==========================================================
+# Unified BloomPot API – firmware can call this one function
+# ==========================================================
+
+def bloompot_step(sensor_data, plant_profile_raw, pot_volume_liters=2.0):
+    """
+    Run one step of the BloomPot model + controller + recommendations.
+
+    INPUTS:
+        sensor_data = {
+            "temperature": float,    # °C
+            "humidity": float,       # %
+            "light": float,          # lux
+            "soil_moisture": float   # fractional 0–1 OR 0–100% (auto-detected)
+        }
+
+        plant_profile_raw = JSON-like plant profile (camelCase keys)
+        pot_volume_liters = soil volume in liters (default=2.0)
+
+    OUTPUT:
+        {
+            "pump_on": bool,
+            "reason": str,
+            "status": {...},
+            "advice": {...}
+        }
+    """
+
+    # 1. Convert camelCase → snake_case profile
+    profile = {
+        "theta_wp": plant_profile_raw["thetaWp"],
+        "theta_fc": plant_profile_raw["thetaFc"],
+        "theta_crit": plant_profile_raw["thetaCrit"],
+        "W_min": plant_profile_raw["WMin"],
+
+        "T_opt": plant_profile_raw.get("TOpt", 25.0),
+        "T_min": plant_profile_raw.get("TMin", 10.0),
+        "T_max": plant_profile_raw.get("TMax", 35.0),
+
+        "L_min": plant_profile_raw["LMin"],
+
+        "k_w": plant_profile_raw["kW"],
+        "k_r_w": plant_profile_raw["kRW"],
+        "k_T": plant_profile_raw["kT"],
+        "k_r_T": plant_profile_raw["kRT"],
+        "k_L": plant_profile_raw["kL"],
+        "k_r_L": plant_profile_raw["kRL"],
+
+        "p": plant_profile_raw["p"],
+
+        "alpha_evap": plant_profile_raw["alphaEvap"],
+        "E_max": plant_profile_raw["EMax"],
+        "c_T": plant_profile_raw["cT"],
+        "c_H": plant_profile_raw["cH"],
+
+        "S_max": plant_profile_raw["SMax"],
+        "k_sat": plant_profile_raw["kSat"],
+        "tau_sat": plant_profile_raw["tauSat"],
+
+        "Q": plant_profile_raw["Q"],
+        "n_retention": plant_profile_raw["nRetention"],
+
+        "W_init": plant_profile_raw["WInit"],
+        "R_init": plant_profile_raw["RInit"],
+    }
+
+    # 2. Initialize model
+    model = BloomPotModel(profile, pot_volume_liters)
+
+    # Override soil moisture with live sensor data
+    soil = sensor_data["soil_moisture"]
+    if soil > 1:        # convert 0–100 to 0–1
+        soil /= 100.0
+    model.W = soil
+
+    # 3. Controller decision
+    T = sensor_data["temperature"]
+    H = sensor_data["humidity"]
+    L = sensor_data["light"]
+
+    pump_on, reason = model.watering_controller()
+
+    # 4. Update simulation (1 hour step or your choice)
+    model.update(T, H, L, pump_on, dt=1.0)
+
+    # 5. Build output object
+    output = {
+        "pump_on": pump_on,
+        "reason": reason,
+        "status": model.status(),
+        "advice": model.recommend(T, L),
+    }
+    return output
+
+
+# ==========================================================
+# Demo main – you can keep or delete
+# ==========================================================
+
+if __name__ == "__main__":
+    print("\n=== Direct Model Simulation (Cherry Tomato) ===\n")
+
+    # Build profile for direct simulation
+    sensor_data = {
+        "temperature": 26.0,
+        "humidity": 55.0,
+        "light": 22000,
+        "soil_moisture": 0.40,   # 40% as fraction
+    }
+
+    # Call API once
+    result = bloompot_step(sensor_data, cherry_tomato_raw, pot_volume_liters=2.0)
+    print("Single-step API result:")
+    print(result)
+
+    print("\n--- Multi-hour simulation with internal state ---\n")
+
+    # If you want a persistent model over time:
+    profile = {
+        "theta_wp": cherry_tomato_raw["thetaWp"],
+        "theta_fc": cherry_tomato_raw["thetaFc"],
+        "theta_crit": cherry_tomato_raw["thetaCrit"],
+        "W_min": cherry_tomato_raw["WMin"],
+        "T_opt": 25.0,
+        "T_min": 10.0,
+        "T_max": 35.0,
+        "L_min": cherry_tomato_raw["LMin"],
+        "k_w": cherry_tomato_raw["kW"],
+        "k_r_w": cherry_tomato_raw["kRW"],
+        "k_T": cherry_tomato_raw["kT"],
+        "k_r_T": cherry_tomato_raw["kRT"],
+        "k_L": cherry_tomato_raw["kL"],
+        "k_r_L": cherry_tomato_raw["kRL"],
+        "p": cherry_tomato_raw["p"],
+        "alpha_evap": cherry_tomato_raw["alphaEvap"],
+        "E_max": cherry_tomato_raw["EMax"],
+        "c_T": cherry_tomato_raw["cT"],
+        "c_H": cherry_tomato_raw["cH"],
+        "S_max": cherry_tomato_raw["SMax"],
+        "k_sat": cherry_tomato_raw["kSat"],
+        "tau_sat": cherry_tomato_raw["tauSat"],
+        "Q": cherry_tomato_raw["Q"],
+        "n_retention": cherry_tomato_raw["nRetention"],
+        "W_init": cherry_tomato_raw["WInit"],
+        "R_init": cherry_tomato_raw["RInit"],
+    }
+
+    model = BloomPotModel(profile, pot_volume_liters=2.0)
+
+    for hour in range(12):
+        T = 26.0
+        H = 55.0
+        L = 22000
+
+        pump_on, reason = model.watering_controller()
+        model.update(T, H, L, pump_on, dt=1.0)
+
+        print(f"Hour {hour+1}:")
+        print("  Pump ON? ", pump_on, "| Reason:", reason)
+        print("  Status:", model.status())
+        print("  Advice:", model.recommend(T, L))
+        print()

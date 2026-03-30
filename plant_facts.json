@@ -1,0 +1,180 @@
+[
+  {
+    "id": "golden_pothos",
+    "common_name": "Golden Pothos",
+    "scientific_name": "Epipremnum aureum",
+    "legacy_category": "tropical",
+    "legacy_light_preference_lux": 1000,
+    "legacy_water_preference": "dry_between",
+    "controller_family": "soil_dry_between",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "peace_lily",
+    "common_name": "Peace Lily",
+    "scientific_name": "Spathiphyllum wallisii",
+    "legacy_category": "tropical",
+    "legacy_light_preference_lux": 1000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "soil_even_moist",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "spider_plant",
+    "common_name": "Spider Plant",
+    "scientific_name": "Chlorophytum comosum",
+    "legacy_category": "tropical",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "soil_even_moist",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "boston_fern",
+    "common_name": "Boston Fern",
+    "scientific_name": "Nephrolepis exaltata",
+    "legacy_category": "fern",
+    "legacy_light_preference_lux": 5000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "fern_high_moisture",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "zz_plant",
+    "common_name": "ZZ Plant",
+    "scientific_name": "Zamioculcas zamiifolia",
+    "legacy_category": "tropical",
+    "legacy_light_preference_lux": 1000,
+    "legacy_water_preference": "dry_between",
+    "controller_family": "soil_dry_between",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "aloe_vera",
+    "common_name": "Aloe Vera",
+    "scientific_name": "Aloe vera",
+    "legacy_category": "succulent",
+    "legacy_light_preference_lux": 20000,
+    "legacy_water_preference": "drought_tolerant",
+    "controller_family": "succulent_fast_drain",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "jade_plant",
+    "common_name": "Jade Plant",
+    "scientific_name": "Crassula ovata",
+    "legacy_category": "succulent",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "drought_tolerant",
+    "controller_family": "succulent_fast_drain",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "moth_orchid",
+    "common_name": "Moth Orchid",
+    "scientific_name": "Phalaenopsis",
+    "legacy_category": "orchid",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "orchid_bark",
+    "controller_family_confidence": "curated",
+    "special_handling": [
+      "manual_review_required"
+    ],
+    "manual_review_reasons": [
+      "substrate_specific_autowatering_not_validated"
+    ],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "venus_fly_trap",
+    "common_name": "Venus Fly Trap",
+    "scientific_name": "Dionaea muscipula",
+    "legacy_category": "carnivorous",
+    "legacy_light_preference_lux": 20000,
+    "legacy_water_preference": "constantly_moist",
+    "controller_family": "bog_carnivorous",
+    "controller_family_confidence": "curated",
+    "special_handling": [
+      "manual_review_required"
+    ],
+    "manual_review_reasons": [
+      "bog_water_quality_requirements_not_validated"
+    ],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "sweet_basil",
+    "common_name": "Sweet Basil",
+    "scientific_name": "Ocimum basilicum",
+    "legacy_category": "herb",
+    "legacy_light_preference_lux": 20000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "soil_even_moist",
+    "controller_family_confidence": "curated",
+    "special_handling": [],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  }
+]
