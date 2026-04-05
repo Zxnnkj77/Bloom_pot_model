@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "plant_facts.schema.json",
-  "title": "Bloom Pot Plant Facts",
+  "$id": "unresolved_species.schema.json",
+  "title": "Bloom Pot Unresolved Species",
   "type": "array",
   "items": {
     "type": "object",
@@ -13,11 +13,7 @@
       "legacy_category",
       "legacy_light_preference_lux",
       "legacy_water_preference",
-      "controller_family",
-      "controller_family_confidence",
-      "migration_status",
-      "special_handling",
-      "manual_review_reasons",
+      "unresolved_reasons",
       "provenance"
     ],
     "properties": {
@@ -60,35 +56,9 @@
           null
         ]
       },
-      "controller_family": {
-        "type": "string",
-        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-      },
-      "controller_family_confidence": {
-        "type": "string",
-        "enum": [
-          "legacy_direct",
-          "legacy_rule_based",
-          "manual_review"
-        ]
-      },
-      "migration_status": {
-        "type": "string",
-        "enum": [
-          "accepted_auto",
-          "accepted_manual"
-        ]
-      },
-      "special_handling": {
+      "unresolved_reasons": {
         "type": "array",
-        "items": {
-          "type": "string",
-          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-        },
-        "uniqueItems": true
-      },
-      "manual_review_reasons": {
-        "type": "array",
+        "minItems": 1,
         "items": {
           "type": "string",
           "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
