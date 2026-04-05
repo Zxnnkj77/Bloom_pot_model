@@ -30,6 +30,7 @@ BloomPotController = CONTROLLER_MODULE.BloomPotController
 ReplayValidationError = EVALUATION_MODULE.ReplayValidationError
 evaluate_replay_path = EVALUATION_MODULE.evaluate_replay_path
 load_replay_scenario = EVALUATION_MODULE.load_replay_scenario
+summarize_replay_results = EVALUATION_MODULE.summarize_replay_results
 
 
 @pytest.mark.parametrize(
@@ -75,6 +76,8 @@ def test_replay_output_is_deterministic():
                 "wet_cutoff_blocks": 2,
                 "hard_dry_events": 3,
                 "confirmation_wait_events": 0,
+                "below_target_steps": 5,
+                "below_target_without_watering": 2,
                 "unresolved_species_rejections": 0,
                 "unknown_plant_rejections": 0,
                 "final_reservoir_ml": 60.0,
@@ -93,6 +96,8 @@ def test_replay_output_is_deterministic():
                 "wet_cutoff_blocks": 0,
                 "hard_dry_events": 0,
                 "confirmation_wait_events": 1,
+                "below_target_steps": 2,
+                "below_target_without_watering": 1,
                 "unresolved_species_rejections": 0,
                 "unknown_plant_rejections": 0,
                 "final_reservoir_ml": 150.0,
@@ -111,6 +116,8 @@ def test_replay_output_is_deterministic():
                 "wet_cutoff_blocks": 0,
                 "hard_dry_events": 3,
                 "confirmation_wait_events": 0,
+                "below_target_steps": 3,
+                "below_target_without_watering": 1,
                 "unresolved_species_rejections": 0,
                 "unknown_plant_rejections": 0,
                 "final_reservoir_ml": 80.0,
@@ -129,6 +136,8 @@ def test_replay_output_is_deterministic():
                 "wet_cutoff_blocks": 0,
                 "hard_dry_events": 5,
                 "confirmation_wait_events": 0,
+                "below_target_steps": 5,
+                "below_target_without_watering": 1,
                 "unresolved_species_rejections": 0,
                 "unknown_plant_rejections": 0,
                 "final_reservoir_ml": 220.0,
@@ -179,6 +188,112 @@ def test_unknown_plant_id_rejection_during_replay():
     assert result["summary"]["unknown_plant_rejections"] == 1
     assert result["summary"]["final_reservoir_ml"] == 200.0
     assert result["rejection"]["code"] == "unknown_plant_id"
+
+
+def test_replay_aggregate_summary_is_stable():
+    results = evaluate_replay_path(FIXTURES_DIR)
+    aggregate = summarize_replay_results(results)
+
+    assert aggregate["overall_summary"] == {
+        "scenario_count": 7,
+        "completed_scenario_count": 5,
+        "rejected_scenario_count": 2,
+        "total_observations": 21,
+        "total_watering_events": 10,
+        "total_dispensed_ml": 630.0,
+        "blocked_by_cooldown": 3,
+        "blocked_by_daily_budget": 1,
+        "blocked_by_manual_review": 2,
+        "blocked_by_reservoir": 0,
+        "wet_cutoff_blocks": 2,
+        "hard_dry_events": 13,
+        "confirmation_wait_events": 1,
+        "below_target_steps": 17,
+        "below_target_without_watering": 7,
+        "unresolved_species_rejections": 1,
+        "unknown_plant_rejections": 1,
+        "final_reservoir_ml_total": 1110.0,
+    }
+    assert aggregate["family_summary"]["soil_even_moist"] == {
+        "scenario_count": 2,
+        "completed_scenario_count": 2,
+        "rejected_scenario_count": 0,
+        "total_observations": 10,
+        "total_watering_events": 5,
+        "total_dispensed_ml": 300.0,
+        "blocked_by_cooldown": 3,
+        "blocked_by_daily_budget": 0,
+        "blocked_by_manual_review": 0,
+        "blocked_by_reservoir": 0,
+        "wet_cutoff_blocks": 2,
+        "hard_dry_events": 6,
+        "confirmation_wait_events": 0,
+        "below_target_steps": 8,
+        "below_target_without_watering": 3,
+        "unresolved_species_rejections": 0,
+        "unknown_plant_rejections": 0,
+        "final_reservoir_ml_total": 140.0,
+    }
+    assert aggregate["family_summary"]["soil_dry_between"] == {
+        "scenario_count": 1,
+        "completed_scenario_count": 1,
+        "rejected_scenario_count": 0,
+        "total_observations": 2,
+        "total_watering_events": 1,
+        "total_dispensed_ml": 50.0,
+        "blocked_by_cooldown": 0,
+        "blocked_by_daily_budget": 0,
+        "blocked_by_manual_review": 0,
+        "blocked_by_reservoir": 0,
+        "wet_cutoff_blocks": 0,
+        "hard_dry_events": 0,
+        "confirmation_wait_events": 1,
+        "below_target_steps": 2,
+        "below_target_without_watering": 1,
+        "unresolved_species_rejections": 0,
+        "unknown_plant_rejections": 0,
+        "final_reservoir_ml_total": 150.0,
+    }
+    assert aggregate["family_summary"]["fern_high_moisture"] == {
+        "scenario_count": 1,
+        "completed_scenario_count": 1,
+        "rejected_scenario_count": 0,
+        "total_observations": 5,
+        "total_watering_events": 4,
+        "total_dispensed_ml": 280.0,
+        "blocked_by_cooldown": 0,
+        "blocked_by_daily_budget": 1,
+        "blocked_by_manual_review": 0,
+        "blocked_by_reservoir": 0,
+        "wet_cutoff_blocks": 0,
+        "hard_dry_events": 5,
+        "confirmation_wait_events": 0,
+        "below_target_steps": 5,
+        "below_target_without_watering": 1,
+        "unresolved_species_rejections": 0,
+        "unknown_plant_rejections": 0,
+        "final_reservoir_ml_total": 220.0,
+    }
+    assert aggregate["family_summary"]["orchid_bark"] == {
+        "scenario_count": 1,
+        "completed_scenario_count": 1,
+        "rejected_scenario_count": 0,
+        "total_observations": 2,
+        "total_watering_events": 0,
+        "total_dispensed_ml": 0.0,
+        "blocked_by_cooldown": 0,
+        "blocked_by_daily_budget": 0,
+        "blocked_by_manual_review": 2,
+        "blocked_by_reservoir": 0,
+        "wet_cutoff_blocks": 0,
+        "hard_dry_events": 2,
+        "confirmation_wait_events": 0,
+        "below_target_steps": 2,
+        "below_target_without_watering": 2,
+        "unresolved_species_rejections": 0,
+        "unknown_plant_rejections": 0,
+        "final_reservoir_ml_total": 200.0,
+    }
 
 
 def test_evaluation_runner_fails_loudly_on_malformed_scenarios(tmp_path):
