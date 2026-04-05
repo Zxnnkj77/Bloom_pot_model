@@ -14,6 +14,7 @@ PLANT_FACTS_SCHEMA_PATH = BASE_DIR / "plant_facts.schema.json"
 UNRESOLVED_SPECIES_PATH = BASE_DIR / "unresolved_species.json"
 UNRESOLVED_SPECIES_SCHEMA_PATH = BASE_DIR / "unresolved_species.schema.json"
 LEGACY_PATH = BASE_DIR / "bloom_plant_schema.json.legacy-20260329-2145.bak"
+FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 
 SPEC = importlib.util.spec_from_file_location("bloom_model_for_plants", MODULE_PATH)
 MODULE = importlib.util.module_from_spec(SPEC)
@@ -32,6 +33,10 @@ def write_json(path, payload):
 
 def load_json(path):
     return json.loads(path.read_text())
+
+
+def load_fixture(name):
+    return load_json(FIXTURES_DIR / name)
 
 
 def validate_schema(payload, schema_path):
@@ -265,6 +270,55 @@ def test_cooldown_exact_boundary_allows_watering():
     assert "Cooldown active" not in result["reason"]
 
 
+@pytest.mark.parametrize(
+    ("state_payload", "timestamp", "expected_reason"),
+    [
+        (
+            {"reservoir_ml": 40.0, "low_reading_count": 1},
+            "2026-03-29T08:00:00+00:00",
+            "Reservoir does not contain the fixed watering dose",
+        ),
+        (
+            {
+                "reservoir_ml": 200.0,
+                "low_reading_count": 1,
+                "last_watered_at": "2026-03-29T07:30:00+00:00",
+            },
+            "2026-03-29T08:00:00+00:00",
+            "Cooldown active",
+        ),
+        (
+            {
+                "reservoir_ml": 200.0,
+                "low_reading_count": 1,
+                "daily_dose_ml": 150.0,
+                "daily_dose_day": "2026-03-29",
+            },
+            "2026-03-29T08:00:00+00:00",
+            "Max daily fixed-dose budget reached",
+        ),
+    ],
+)
+def test_blocked_low_readings_do_not_advance_confirmation_count(
+    state_payload,
+    timestamp,
+    expected_reason,
+):
+    controller = BloomPotController(default_reservoir_ml=200.0)
+    state = ControllerState.from_dict(state_payload, default_reservoir_ml=200.0)
+
+    result = controller.step(
+        "golden_pothos",
+        0.1,
+        timestamp=timestamp,
+        state=state,
+    )
+
+    assert result["pump_on"] is False
+    assert expected_reason in result["reason"]
+    assert state.low_reading_count == 1
+
+
 def test_confirm_low_readings_behavior():
     controller = BloomPotController(default_reservoir_ml=200.0)
     state = controller.initialize_state(reservoir_ml=200.0)
@@ -378,6 +432,76 @@ def test_daily_rollover_resets_budget():
     assert result["pump_on"] is True
     assert state.daily_dose_day == "2026-03-29"
     assert state.daily_dose_ml == 60.0
+
+
+def test_simulate_scenario_returns_deterministic_decision_trace():
+    controller = BloomPotController(default_reservoir_ml=240.0)
+    fixture = load_fixture("peace_lily_full_day.json")
+
+    scenario = controller.simulate_scenario(
+        fixture["plant_id"],
+        fixture["observations"],
+        initial_state=fixture["initial_state"],
+    )
+
+    trace = scenario["trace"]
+    assert [step["pump_on"] for step in trace] == [False, True, False, True, False, True, False]
+    assert [step["decision_code"] for step in trace] == [
+        "wet_cutoff_block",
+        "hard_dry_approved",
+        "cooldown_block",
+        "confirmed_low_approved",
+        "wet_cutoff_block",
+        "hard_dry_approved",
+        "cooldown_block",
+    ]
+    assert [step["reservoir_ml_after"] for step in trace] == [240.0, 180.0, 180.0, 120.0, 120.0, 60.0, 60.0]
+    assert [step["daily_dose_ml_after"] for step in trace] == [0.0, 60.0, 60.0, 120.0, 120.0, 180.0, 180.0]
+    assert [step["low_reading_count_after"] for step in trace] == [0, 0, 0, 0, 0, 0, 0]
+    assert scenario["final_state"] == {
+        "reservoir_ml": 60.0,
+        "low_reading_count": 0,
+        "last_watered_at": "2026-03-29T21:00:00+00:00",
+        "daily_dose_ml": 180.0,
+        "daily_dose_day": "2026-03-29",
+    }
+
+
+def test_simulate_scenario_cooldown_blocked_low_reading_does_not_advance_confirmation_count():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    scenario = controller.simulate_scenario(
+        "golden_pothos",
+        [
+            {"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.04},
+            {"timestamp": "2026-03-29T09:00:00+00:00", "soil_moisture": 0.10},
+            {"timestamp": "2026-03-29T21:00:00+00:00", "soil_moisture": 0.10},
+            {"timestamp": "2026-03-30T10:00:00+00:00", "soil_moisture": 0.10},
+        ],
+        initial_reservoir_ml=200.0,
+    )
+
+    trace = scenario["trace"]
+    assert [step["pump_on"] for step in trace] == [True, False, False, True]
+    assert trace[1]["low_reading_count_before"] == 0
+    assert trace[1]["low_reading_count_after"] == 0
+    assert trace[1]["decision_code"] == "cooldown_block"
+    assert trace[2]["low_reading_count_before"] == 0
+    assert trace[2]["low_reading_count_after"] == 1
+    assert trace[2]["decision_code"] == "confirmation_wait"
+    assert trace[3]["low_reading_count_before"] == 1
+    assert trace[3]["decision_code"] == "confirmed_low_approved"
+
+
+def test_simulate_scenario_rejects_unresolved_species_ids_explicitly():
+    controller = BloomPotController(default_reservoir_ml=200.0)
+
+    with pytest.raises(KeyError, match="unresolved and not loadable"):
+        controller.simulate_scenario(
+            "christmas_cactus",
+            [{"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.1}],
+            initial_reservoir_ml=200.0,
+        )
 
 
 def test_manual_no_autowater_families():

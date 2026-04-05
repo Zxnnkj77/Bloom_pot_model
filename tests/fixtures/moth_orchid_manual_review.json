@@ -1,0 +1,18 @@
+{
+  "scenario_id": "moth_orchid_manual_review",
+  "plant_id": "moth_orchid",
+  "initial_state": {
+    "reservoir_ml": 200.0
+  },
+  "observations": [
+    {
+      "timestamp": "2026-03-29T08:00:00+00:00",
+      "soil_moisture": 0.01
+    },
+    {
+      "timestamp": "2026-03-29T20:00:00+00:00",
+      "soil_moisture": 0.01
+    }
+  ],
+  "notes": "Accepted manual plant ids should always stay blocked for autowatering."
+}

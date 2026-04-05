@@ -1,0 +1,38 @@
+{
+  "scenario_id": "peace_lily_full_day",
+  "plant_id": "peace_lily",
+  "initial_state": {
+    "reservoir_ml": 240.0
+  },
+  "observations": [
+    {
+      "timestamp": "2026-03-29T00:00:00+00:00",
+      "soil_moisture": 0.5
+    },
+    {
+      "timestamp": "2026-03-29T06:00:00+00:00",
+      "soil_moisture": 0.04
+    },
+    {
+      "timestamp": "2026-03-29T09:00:00+00:00",
+      "soil_moisture": 0.17
+    },
+    {
+      "timestamp": "2026-03-29T12:00:00+00:00",
+      "soil_moisture": 0.17
+    },
+    {
+      "timestamp": "2026-03-29T18:00:00+00:00",
+      "soil_moisture": 0.4
+    },
+    {
+      "timestamp": "2026-03-29T21:00:00+00:00",
+      "soil_moisture": 0.03
+    },
+    {
+      "timestamp": "2026-03-29T23:00:00+00:00",
+      "soil_moisture": 0.03
+    }
+  ],
+  "notes": "Full-day replay for a single accepted auto plant with wet, hard-dry, cooldown, and confirmation paths."
+}

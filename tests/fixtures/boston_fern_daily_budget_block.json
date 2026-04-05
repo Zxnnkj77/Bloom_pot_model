@@ -1,0 +1,30 @@
+{
+  "scenario_id": "boston_fern_daily_budget_block",
+  "plant_id": "boston_fern",
+  "initial_state": {
+    "reservoir_ml": 500.0
+  },
+  "observations": [
+    {
+      "timestamp": "2026-03-29T00:00:00+00:00",
+      "soil_moisture": 0.05
+    },
+    {
+      "timestamp": "2026-03-29T04:00:00+00:00",
+      "soil_moisture": 0.05
+    },
+    {
+      "timestamp": "2026-03-29T08:00:00+00:00",
+      "soil_moisture": 0.05
+    },
+    {
+      "timestamp": "2026-03-29T12:00:00+00:00",
+      "soil_moisture": 0.05
+    },
+    {
+      "timestamp": "2026-03-29T16:00:00+00:00",
+      "soil_moisture": 0.05
+    }
+  ],
+  "notes": "Daily budget should stop a fifth hard-dry watering event on the same day."
+}
