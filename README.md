@@ -10,7 +10,7 @@
 
 `bloom_controller.py` validates both JSON files against those schemas, enforces cross-file consistency, then runs the persistent watering controller. It keeps state such as reservoir level, low-reading confirmations, last watering time, and daily dose usage, then returns a pump decision with an explicit reason. It also exposes deterministic scenario replay with per-step decision traces so controller behavior can be inspected without mutating the caller's starting state.
 
-`bloom_evaluation.py` validates replay fixtures against `controller_replay.schema.json`, replays ordered timestamped moisture observations through the current controller, records each trace step, and emits summary metrics for watering events, blocks, and rejections.
+`bloom_evaluation.py` validates replay fixtures against `controller_replay.schema.json`, replays ordered timestamped moisture observations through the current controller, records each trace step, and emits a deterministic report with per-scenario traces, per-scenario summaries, family-level summaries, and an overall summary. The scenario metrics now include replay step counts, watering totals, below/inside/above-target counts, block-reason counts, hard-dry trigger counts, and rejection counts so later calibration work can compare controller behavior without changing thresholds.
 
 `DATA_MODEL_AUDIT.md` summarizes the schema audit, the field splits and removals, and the unresolved provenance limits that remain.
 
@@ -28,3 +28,5 @@ Run replay evaluation on one fixture or a directory of fixtures with:
 python bloom_evaluation.py tests/fixtures/peace_lily_full_day.json
 python bloom_evaluation.py tests/fixtures --summary-only
 ```
+
+`--summary-only` prints the scenario summaries, family summaries, and overall summary without the per-step replay traces.
