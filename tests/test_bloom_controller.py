@@ -59,6 +59,7 @@ def test_dry_trigger():
 
     assert result["pump_on"] is True
     assert result["dose_ml"] == 60.0
+    assert result["reason_code"] == "hard_dry_approved"
     assert "hard dry cutoff" in result["reason"]
 
 
@@ -75,6 +76,7 @@ def test_wet_no_trigger():
 
     assert result["pump_on"] is False
     assert result["dose_ml"] == 0.0
+    assert result["reason_code"] == "wet_cutoff_block"
     assert "wet cutoff" in result["reason"]
 
 
@@ -132,8 +134,10 @@ def test_confirm_low_readings_behavior():
     )
 
     assert first["pump_on"] is False
+    assert first["reason_code"] == "confirmation_wait"
     assert "waiting for 2 confirmations" in first["reason"]
     assert second["pump_on"] is True
+    assert second["reason_code"] == "confirmed_low_approved"
     assert "Confirmed 2 consecutive low readings" in second["reason"]
 
 
@@ -568,7 +572,7 @@ def test_simulate_scenario_unknown_species_rejected():
 
     with pytest.raises(KeyError, match="Unknown plant id"):
         controller.simulate_scenario(
-            "unresolved_species",
+            "unknown_plant_id",
             [{"timestamp": "2026-03-29T08:00:00+00:00", "soil_moisture": 0.10}],
             initial_reservoir_ml=200.0,
         )
@@ -606,20 +610,34 @@ def test_simulate_scenario_percent_moisture_inputs_are_normalized_per_step():
     assert scenario["trace"][2]["daily_dose_ml_after"] == 120.0
 
 
-def test_golden_full_day_scenario_fixture():
+def test_peace_lily_full_day_replay_fixture_with_controller():
     controller = BloomPotController(default_reservoir_ml=240.0)
     fixture = load_fixture("peace_lily_full_day.json")
 
     scenario = controller.simulate_scenario(
         fixture["plant_id"],
-        fixture["readings"],
-        initial_reservoir_ml=fixture["initial_reservoir_ml"],
+        fixture["observations"],
+        initial_state=fixture["initial_state"],
     )
 
     trace = scenario["trace"]
-    assert [step["pump_on"] for step in trace] == fixture["expected_pump_on"]
-    assert [step["reservoir_ml_after"] for step in trace] == fixture["expected_reservoir_after"]
-    assert [step["daily_dose_ml_after"] for step in trace] == fixture["expected_daily_dose_after"]
-    assert [step["low_reading_count_after"] for step in trace] == fixture["expected_low_reading_count_after"]
-    assert [step["reason"] for step in trace] == fixture["expected_reasons"]
-    assert scenario["final_state"] == fixture["expected_final_state"]
+    assert [step["pump_on"] for step in trace] == [False, True, False, True, False, True, False]
+    assert [step["reason_code"] for step in trace] == [
+        "wet_cutoff_block",
+        "hard_dry_approved",
+        "cooldown_block",
+        "confirmed_low_approved",
+        "wet_cutoff_block",
+        "hard_dry_approved",
+        "cooldown_block",
+    ]
+    assert [step["reservoir_ml_after"] for step in trace] == [240.0, 180.0, 180.0, 120.0, 120.0, 60.0, 60.0]
+    assert [step["daily_dose_ml_after"] for step in trace] == [0.0, 60.0, 60.0, 120.0, 120.0, 180.0, 180.0]
+    assert [step["low_reading_count_after"] for step in trace] == [0, 0, 0, 0, 0, 0, 0]
+    assert scenario["final_state"] == {
+        "reservoir_ml": 60.0,
+        "low_reading_count": 0,
+        "last_watered_at": "2026-03-29T21:00:00+00:00",
+        "daily_dose_ml": 180.0,
+        "daily_dose_day": "2026-03-29",
+    }

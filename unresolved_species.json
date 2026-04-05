@@ -1,0 +1,50 @@
+[
+  {
+    "id": "christmas_cactus",
+    "common_name": "Christmas Cactus",
+    "scientific_name": "Schlumbergera bridgesii",
+    "legacy_category": "succulent",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "evenly_moist",
+    "unresolved_reasons": [
+      "unsupported_legacy_category_water_preference_combination"
+    ],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "easter_cactus",
+    "common_name": "Easter Cactus",
+    "scientific_name": "Hatiora gaertneri",
+    "legacy_category": "succulent",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "evenly_moist",
+    "unresolved_reasons": [
+      "unsupported_legacy_category_water_preference_combination"
+    ],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "orchid_cactus",
+    "common_name": "Orchid Cactus",
+    "scientific_name": "Disocactus ackermannii",
+    "legacy_category": "succulent",
+    "legacy_light_preference_lux": 10000,
+    "legacy_water_preference": "evenly_moist",
+    "unresolved_reasons": [
+      "unsupported_legacy_category_water_preference_combination"
+    ],
+    "provenance": {
+      "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+      "source_type": "legacy_backup_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  }
+]

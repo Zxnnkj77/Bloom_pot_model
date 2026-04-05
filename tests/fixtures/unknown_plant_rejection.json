@@ -1,0 +1,14 @@
+{
+  "scenario_id": "unknown_plant_rejection",
+  "plant_id": "unknown_plant_id",
+  "initial_state": {
+    "reservoir_ml": 200.0
+  },
+  "observations": [
+    {
+      "timestamp": "2026-03-29T08:00:00+00:00",
+      "soil_moisture": 0.1
+    }
+  ],
+  "notes": "Replay input with a plant id that is neither curated nor present in unresolved_species.json."
+}

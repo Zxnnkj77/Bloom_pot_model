@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "unresolved_species.schema.json",
+  "title": "Bloom Pot Unresolved Species",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "id",
+      "common_name",
+      "scientific_name",
+      "legacy_category",
+      "legacy_light_preference_lux",
+      "legacy_water_preference",
+      "unresolved_reasons",
+      "provenance"
+    ],
+    "properties": {
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "common_name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "scientific_name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "legacy_category": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "legacy_light_preference_lux": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 0
+      },
+      "legacy_water_preference": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "evenly_moist",
+          "dry_between",
+          "drought_tolerant",
+          "constantly_moist",
+          null
+        ]
+      },
+      "unresolved_reasons": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "uniqueItems": true
+      },
+      "provenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source_file",
+          "source_type",
+          "match_type"
+        ],
+        "properties": {
+          "source_file": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "legacy_backup_record"
+            ]
+          },
+          "match_type": {
+            "type": "string",
+            "enum": [
+              "exact_common_name_and_scientific_name"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
