@@ -1,0 +1,38 @@
+{
+  "evidence_record_count": 22,
+  "plant_count": 3,
+  "evidence_class_counts": {
+    "controller_profile_value": 2,
+    "derived_inference": 3,
+    "legacy_migrated_value": 12,
+    "replay_derived_observation": 5
+  },
+  "controller_status_counts": {
+    "controller_ready": 1,
+    "blocked": 2
+  },
+  "attribute_status_counts": {
+    "supported": 21,
+    "blocked": 4
+  },
+  "plant_summary": {
+    "christmas_cactus": {
+      "evidence_record_count": 5,
+      "controller_status": "blocked",
+      "supported_attribute_count": 4,
+      "blocked_attribute_count": 2
+    },
+    "moth_orchid": {
+      "evidence_record_count": 9,
+      "controller_status": "blocked",
+      "supported_attribute_count": 8,
+      "blocked_attribute_count": 2
+    },
+    "peace_lily": {
+      "evidence_record_count": 8,
+      "controller_status": "controller_ready",
+      "supported_attribute_count": 9,
+      "blocked_attribute_count": 0
+    }
+  }
+}
