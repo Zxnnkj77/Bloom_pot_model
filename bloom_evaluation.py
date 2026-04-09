@@ -25,6 +25,24 @@ class ReplayValidationError(ValueError):
     """Raised when replay input is malformed."""
 
 
+SUMMARY_METRIC_KEYS = (
+    "total_observations",
+    "total_watering_events",
+    "total_dispensed_ml",
+    "blocked_by_cooldown",
+    "blocked_by_daily_budget",
+    "blocked_by_manual_review",
+    "blocked_by_reservoir",
+    "wet_cutoff_blocks",
+    "hard_dry_events",
+    "confirmation_wait_events",
+    "below_target_steps",
+    "below_target_without_watering",
+    "unresolved_species_rejections",
+    "unknown_plant_rejections",
+)
+
+
 def _validate_schema(payload: Any, *, schema_path: Path, data_path: str | Path) -> None:
     schema = json.loads(schema_path.read_text())
     errors = sorted(
@@ -101,6 +119,8 @@ def _empty_summary(*, total_observations: int, final_reservoir_ml: float) -> dic
         "wet_cutoff_blocks": 0,
         "hard_dry_events": 0,
         "confirmation_wait_events": 0,
+        "below_target_steps": 0,
+        "below_target_without_watering": 0,
         "unresolved_species_rejections": 0,
         "unknown_plant_rejections": 0,
         "final_reservoir_ml": round(final_reservoir_ml, 3),
@@ -134,7 +154,66 @@ def _summarize_trace(
         if step["soil_moisture"]
         <= controller.controller_profiles[step["controller_family"]]["hard_dry_cutoff"]
     )
+    summary["below_target_steps"] = sum(
+        1 for step in trace if step["soil_moisture"] < step["target_band"][0]
+    )
+    summary["below_target_without_watering"] = sum(
+        1
+        for step in trace
+        if step["soil_moisture"] < step["target_band"][0] and not step["pump_on"]
+    )
     return summary
+
+
+def _empty_aggregate_summary() -> dict[str, Any]:
+    return {
+        "scenario_count": 0,
+        "completed_scenario_count": 0,
+        "rejected_scenario_count": 0,
+        **{
+            metric: 0.0 if metric in {"total_dispensed_ml"} else 0
+            for metric in SUMMARY_METRIC_KEYS
+        },
+        "final_reservoir_ml_total": 0.0,
+    }
+
+
+def _accumulate_summary(bucket: dict[str, Any], result: dict[str, Any]) -> None:
+    bucket["scenario_count"] += 1
+    if result["status"] == "completed":
+        bucket["completed_scenario_count"] += 1
+    else:
+        bucket["rejected_scenario_count"] += 1
+
+    summary = result["summary"]
+    for metric in SUMMARY_METRIC_KEYS:
+        bucket[metric] += summary[metric]
+    bucket["final_reservoir_ml_total"] = round(
+        bucket["final_reservoir_ml_total"] + summary["final_reservoir_ml"],
+        3,
+    )
+    bucket["total_dispensed_ml"] = round(bucket["total_dispensed_ml"], 3)
+
+
+def summarize_replay_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    overall_summary = _empty_aggregate_summary()
+    family_summaries: dict[str, dict[str, Any]] = {}
+
+    for result in results:
+        _accumulate_summary(overall_summary, result)
+        controller_family = result["controller_family"]
+        if controller_family is None:
+            continue
+        family_summary = family_summaries.setdefault(
+            controller_family,
+            _empty_aggregate_summary(),
+        )
+        _accumulate_summary(family_summary, result)
+
+    return {
+        "overall_summary": overall_summary,
+        "family_summary": family_summaries,
+    }
 
 
 def evaluate_replay_scenario(
@@ -147,6 +226,8 @@ def evaluate_replay_scenario(
     unresolved_catalog = unresolved_species
     if unresolved_catalog is None:
         unresolved_catalog = evaluation_controller.unresolved_species
+    plant_record = evaluation_controller.plant_facts.get(scenario["plant_id"])
+    controller_family = None if plant_record is None else plant_record["controller_family"]
 
     initial_state = ControllerState.from_dict(
         scenario["initial_state"],
@@ -175,6 +256,7 @@ def evaluate_replay_scenario(
         return {
             "scenario_id": scenario["scenario_id"],
             "plant_id": scenario["plant_id"],
+            "controller_family": controller_family,
             "status": "rejected",
             "trace": [],
             "summary": summary,
@@ -196,6 +278,7 @@ def evaluate_replay_scenario(
     return {
         "scenario_id": scenario["scenario_id"],
         "plant_id": scenario["plant_id"],
+        "controller_family": controller_family,
         "status": "completed",
         "trace": result["trace"],
         "summary": summary,
