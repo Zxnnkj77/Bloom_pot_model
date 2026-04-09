@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plant_attributes.schema.json",
+  "title": "Bloom Pot Derived Plant Attributes",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "plant_id",
+      "attribute_name",
+      "value",
+      "unit",
+      "evidence_class",
+      "source_record_id",
+      "source_kind",
+      "source_reference",
+      "observed_at",
+      "recorded_at",
+      "notes",
+      "controller_ready",
+      "controller_blocked_reasons",
+      "provenance"
+    ],
+    "properties": {
+      "plant_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "attribute_name": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "value": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null"
+        ]
+      },
+      "unit": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "minLength": 1
+      },
+      "evidence_class": {
+        "type": "string",
+        "enum": [
+          "legacy_backed",
+          "experimental_observation",
+          "inferred",
+          "unresolved"
+        ]
+      },
+      "source_record_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "source_kind": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "source_reference": {
+        "type": "string",
+        "minLength": 1
+      },
+      "observed_at": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "format": "date-time"
+      },
+      "recorded_at": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "notes": {
+        "type": "string"
+      },
+      "controller_ready": {
+        "type": "boolean"
+      },
+      "controller_blocked_reasons": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "uniqueItems": true
+      },
+      "provenance": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "derived_from_record_id",
+          "derived_at",
+          "derivation_method"
+        ],
+        "properties": {
+          "derived_from_record_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+          },
+          "derived_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "derivation_method": {
+            "type": "string",
+            "enum": [
+              "latest_record_wins"
+            ]
+          }
+        }
+      }
+    }
+  }
+}
