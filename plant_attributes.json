@@ -1,0 +1,248 @@
+[
+  {
+    "plant_id": "christmas_cactus",
+    "evidence_record_count": 5,
+    "controller_status": "blocked",
+    "controller_block_reasons": [
+      "unsupported_legacy_category_water_preference_combination"
+    ],
+    "attributes": {
+      "controller_family_assignment": {
+        "status": "blocked",
+        "value": null,
+        "evidence_ids": [
+          "christmas_cactus_unresolved_reasons"
+        ],
+        "blocked_reasons": [
+          "unsupported_legacy_category_water_preference_combination"
+        ]
+      },
+      "controller_readiness": {
+        "status": "blocked",
+        "value": "blocked",
+        "evidence_ids": [
+          "christmas_cactus_controller_readiness"
+        ],
+        "blocked_reasons": [
+          "unsupported_legacy_category_water_preference_combination"
+        ]
+      },
+      "legacy_light_preference_lux": {
+        "status": "supported",
+        "value": 10000,
+        "evidence_ids": [
+          "christmas_cactus_legacy_light_preference_lux"
+        ],
+        "blocked_reasons": []
+      },
+      "legacy_water_preference": {
+        "status": "supported",
+        "value": "evenly_moist",
+        "evidence_ids": [
+          "christmas_cactus_legacy_water_preference"
+        ],
+        "blocked_reasons": []
+      },
+      "replay_unresolved_species_rejections": {
+        "status": "supported",
+        "value": 1,
+        "evidence_ids": [
+          "christmas_cactus_replay_unresolved_species_rejections"
+        ],
+        "blocked_reasons": []
+      },
+      "unresolved_reasons": {
+        "status": "supported",
+        "value": [
+          "unsupported_legacy_category_water_preference_combination"
+        ],
+        "evidence_ids": [
+          "christmas_cactus_unresolved_reasons"
+        ],
+        "blocked_reasons": []
+      }
+    }
+  },
+  {
+    "plant_id": "moth_orchid",
+    "evidence_record_count": 9,
+    "controller_status": "blocked",
+    "controller_block_reasons": [
+      "legacy_category_orchid_requires_manual_review"
+    ],
+    "attributes": {
+      "autowater_controller_access": {
+        "status": "blocked",
+        "value": false,
+        "evidence_ids": [
+          "moth_orchid_migration_status",
+          "moth_orchid_manual_review_reasons",
+          "moth_orchid_controller_autowater_enabled",
+          "moth_orchid_controller_readiness"
+        ],
+        "blocked_reasons": [
+          "legacy_category_orchid_requires_manual_review"
+        ]
+      },
+      "controller_autowater_enabled": {
+        "status": "supported",
+        "value": false,
+        "evidence_ids": [
+          "moth_orchid_controller_autowater_enabled"
+        ],
+        "blocked_reasons": []
+      },
+      "controller_family": {
+        "status": "supported",
+        "value": "orchid_bark",
+        "evidence_ids": [
+          "moth_orchid_controller_family"
+        ],
+        "blocked_reasons": []
+      },
+      "controller_readiness": {
+        "status": "blocked",
+        "value": "blocked",
+        "evidence_ids": [
+          "moth_orchid_controller_readiness"
+        ],
+        "blocked_reasons": [
+          "legacy_category_orchid_requires_manual_review"
+        ]
+      },
+      "legacy_light_preference_lux": {
+        "status": "supported",
+        "value": 10000,
+        "evidence_ids": [
+          "moth_orchid_legacy_light_preference_lux"
+        ],
+        "blocked_reasons": []
+      },
+      "legacy_water_preference": {
+        "status": "supported",
+        "value": "evenly_moist",
+        "evidence_ids": [
+          "moth_orchid_legacy_water_preference"
+        ],
+        "blocked_reasons": []
+      },
+      "manual_review_reasons": {
+        "status": "supported",
+        "value": [
+          "legacy_category_orchid_requires_manual_review"
+        ],
+        "evidence_ids": [
+          "moth_orchid_manual_review_reasons"
+        ],
+        "blocked_reasons": []
+      },
+      "migration_status": {
+        "status": "supported",
+        "value": "accepted_manual",
+        "evidence_ids": [
+          "moth_orchid_migration_status"
+        ],
+        "blocked_reasons": []
+      },
+      "replay_blocked_by_manual_review": {
+        "status": "supported",
+        "value": 2,
+        "evidence_ids": [
+          "moth_orchid_replay_blocked_by_manual_review"
+        ],
+        "blocked_reasons": []
+      },
+      "replay_total_watering_events": {
+        "status": "supported",
+        "value": 0,
+        "evidence_ids": [
+          "moth_orchid_replay_total_watering_events"
+        ],
+        "blocked_reasons": []
+      }
+    }
+  },
+  {
+    "plant_id": "peace_lily",
+    "evidence_record_count": 8,
+    "controller_status": "controller_ready",
+    "controller_block_reasons": [],
+    "attributes": {
+      "autowater_controller_access": {
+        "status": "supported",
+        "value": true,
+        "evidence_ids": [
+          "peace_lily_migration_status",
+          "peace_lily_controller_family",
+          "peace_lily_controller_autowater_enabled",
+          "peace_lily_controller_readiness"
+        ],
+        "blocked_reasons": []
+      },
+      "controller_autowater_enabled": {
+        "status": "supported",
+        "value": true,
+        "evidence_ids": [
+          "peace_lily_controller_autowater_enabled"
+        ],
+        "blocked_reasons": []
+      },
+      "controller_family": {
+        "status": "supported",
+        "value": "soil_even_moist",
+        "evidence_ids": [
+          "peace_lily_controller_family"
+        ],
+        "blocked_reasons": []
+      },
+      "controller_readiness": {
+        "status": "supported",
+        "value": "controller_ready",
+        "evidence_ids": [
+          "peace_lily_controller_readiness"
+        ],
+        "blocked_reasons": []
+      },
+      "legacy_light_preference_lux": {
+        "status": "supported",
+        "value": 1000,
+        "evidence_ids": [
+          "peace_lily_legacy_light_preference_lux"
+        ],
+        "blocked_reasons": []
+      },
+      "legacy_water_preference": {
+        "status": "supported",
+        "value": "evenly_moist",
+        "evidence_ids": [
+          "peace_lily_legacy_water_preference"
+        ],
+        "blocked_reasons": []
+      },
+      "migration_status": {
+        "status": "supported",
+        "value": "accepted_auto",
+        "evidence_ids": [
+          "peace_lily_migration_status"
+        ],
+        "blocked_reasons": []
+      },
+      "replay_blocked_by_cooldown": {
+        "status": "supported",
+        "value": 2,
+        "evidence_ids": [
+          "peace_lily_replay_blocked_by_cooldown"
+        ],
+        "blocked_reasons": []
+      },
+      "replay_total_watering_events": {
+        "status": "supported",
+        "value": 3,
+        "evidence_ids": [
+          "peace_lily_replay_total_watering_events"
+        ],
+        "blocked_reasons": []
+      }
+    }
+  }
+]

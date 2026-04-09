@@ -2,6 +2,11 @@
 
 `plant_facts.json` contains the accepted migrated plant catalog. Each record stores only identity, legacy-backed evidence fields, migration metadata, normalized `special_handling` tags, explicit `manual_review_reasons`, and provenance.
 
+`evidence_records.json` contains the Round 13 evidence bundle. This first real pack is intentionally small and only includes explicit legacy-backed migrated values, replay-derived observations from existing fixtures, controller-profile-backed readiness facts, and explicit derived readiness inferences with supporting evidence ids.
+
+`plant_attributes.json` is the deterministic derived attribute catalog rebuilt from `evidence_records.json`. It groups the current evidence by plant, preserves explicit controller-ready vs blocked status, and keeps unresolved or manual-review-only controller attributes blocked. It is not used by the controller runtime in this round.
+
+`evidence_coverage_summary.json` is the checked-in summary output for the current evidence bundle. It reports coverage by evidence class, plant id, and controller-ready vs blocked status.
 `unresolved_species.json` contains legacy species that could not be mapped into an existing controller family by the explicit migration rules. These records preserve only the legacy-backed evidence fields, explicit unresolved reason tags, and provenance.
 
 `controller_profiles.json` contains controller and hardware behavior only. Each profile now defines an explicit `moisture_target`, moisture cutoffs, fixed watering dose, cooldown, confirmation count, daily max dose, sensor model, substrate type, `autowater_enabled`, and any `manual_review_reasons`.
@@ -18,6 +23,7 @@
 
 `bloom_calibration_workflow.py` adds Round 10 end-to-end orchestration. It validates and loads replay data, evaluates the current baseline controller, runs the offline calibration search, compares the ranked candidates against baseline on the same deterministic replay set, and exports a final workflow JSON object plus Markdown report. It stays offline, does not apply controller changes automatically, and exits nonzero when no candidate survives or no candidate beats baseline.
 
+`plant_evidence.py` adds Round 13 evidence validation and reporting. It validates `evidence_records.json` against the plant catalogs, controller profiles, and replay fixtures, rebuilds `plant_attributes.json` deterministically, and emits `evidence_coverage_summary.json`. Controller thresholds and runtime behavior remain unchanged in this round.
 `DATA_MODEL_AUDIT.md` summarizes the schema audit, the field splits and removals, and the unresolved provenance limits that remain.
 
 `migrate_legacy_catalog.py` is the deterministic migration pipeline. It reads `bloom_plant_schema.json.legacy-20260329-2145.bak`, applies the explicit category and water-preference mapping rules, writes `plant_facts.json`, `unresolved_species.json`, and `migration_report.md`, then validates the generated JSON against the schemas.
@@ -28,6 +34,25 @@ Run the tests with:
 pytest -q
 ```
 
+Validate the evidence layer with:
+
+```bash
+python plant_evidence.py validate
+```
+
+Rebuild the derived evidence outputs with:
+
+```bash
+python plant_evidence.py rebuild
+```
+
+Print the current evidence coverage summary with:
+
+```bash
+python plant_evidence.py summary
+```
+
+The evidence workflow validates the raw evidence records, cross-checks replay-derived observations against the existing fixtures, then rewrites `plant_attributes.json` and `evidence_coverage_summary.json` deterministically from the checked-in evidence pack.
 Run replay evaluation on one fixture or a directory of fixtures with:
 
 ```bash

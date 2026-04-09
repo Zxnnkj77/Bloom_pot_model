@@ -1,0 +1,305 @@
+[
+  {
+    "id": "peace_lily_legacy_light_preference_lux",
+    "plant_id": "peace_lily",
+    "attribute_name": "legacy_light_preference_lux",
+    "evidence_class": "legacy_migrated_value",
+    "value": 1000,
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "peace_lily",
+      "detail": "Copied from plant_facts.json for peace_lily."
+    }
+  },
+  {
+    "id": "peace_lily_legacy_water_preference",
+    "plant_id": "peace_lily",
+    "attribute_name": "legacy_water_preference",
+    "evidence_class": "legacy_migrated_value",
+    "value": "evenly_moist",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "peace_lily",
+      "detail": "Copied from plant_facts.json for peace_lily."
+    }
+  },
+  {
+    "id": "peace_lily_controller_family",
+    "plant_id": "peace_lily",
+    "attribute_name": "controller_family",
+    "evidence_class": "legacy_migrated_value",
+    "value": "soil_even_moist",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "peace_lily",
+      "detail": "Copied from plant_facts.json for peace_lily."
+    }
+  },
+  {
+    "id": "peace_lily_migration_status",
+    "plant_id": "peace_lily",
+    "attribute_name": "migration_status",
+    "evidence_class": "legacy_migrated_value",
+    "value": "accepted_auto",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "peace_lily",
+      "detail": "Copied from plant_facts.json for peace_lily."
+    }
+  },
+  {
+    "id": "peace_lily_replay_total_watering_events",
+    "plant_id": "peace_lily",
+    "attribute_name": "replay_total_watering_events",
+    "evidence_class": "replay_derived_observation",
+    "value": 3,
+    "provenance": {
+      "source_file": "tests/fixtures/peace_lily_full_day.json",
+      "source_type": "replay_fixture",
+      "source_scenario_id": "peace_lily_full_day",
+      "detail": "Derived from the replay summary for peace_lily_full_day."
+    }
+  },
+  {
+    "id": "peace_lily_replay_blocked_by_cooldown",
+    "plant_id": "peace_lily",
+    "attribute_name": "replay_blocked_by_cooldown",
+    "evidence_class": "replay_derived_observation",
+    "value": 2,
+    "provenance": {
+      "source_file": "tests/fixtures/peace_lily_full_day.json",
+      "source_type": "replay_fixture",
+      "source_scenario_id": "peace_lily_full_day",
+      "detail": "Derived from the replay summary for peace_lily_full_day."
+    }
+  },
+  {
+    "id": "peace_lily_controller_autowater_enabled",
+    "plant_id": "peace_lily",
+    "attribute_name": "controller_autowater_enabled",
+    "evidence_class": "controller_profile_value",
+    "value": true,
+    "provenance": {
+      "source_file": "controller_profiles.json",
+      "source_type": "controller_profile_record",
+      "source_controller_family": "soil_even_moist",
+      "detail": "Copied from controller_profiles.json soil_even_moist.autowater_enabled."
+    }
+  },
+  {
+    "id": "peace_lily_controller_readiness",
+    "plant_id": "peace_lily",
+    "attribute_name": "controller_readiness",
+    "evidence_class": "derived_inference",
+    "value": "controller_ready",
+    "provenance": {
+      "source_file": "evidence_records.json",
+      "source_type": "derived_from_evidence",
+      "supporting_evidence_ids": [
+        "peace_lily_migration_status",
+        "peace_lily_controller_family",
+        "peace_lily_controller_autowater_enabled"
+      ],
+      "derivation": "accepted_auto plus an assigned autowater-enabled controller family implies controller_ready.",
+      "detail": "Explicit readiness inference for peace_lily."
+    }
+  },
+  {
+    "id": "moth_orchid_legacy_light_preference_lux",
+    "plant_id": "moth_orchid",
+    "attribute_name": "legacy_light_preference_lux",
+    "evidence_class": "legacy_migrated_value",
+    "value": 10000,
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "moth_orchid",
+      "detail": "Copied from plant_facts.json for moth_orchid."
+    }
+  },
+  {
+    "id": "moth_orchid_legacy_water_preference",
+    "plant_id": "moth_orchid",
+    "attribute_name": "legacy_water_preference",
+    "evidence_class": "legacy_migrated_value",
+    "value": "evenly_moist",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "moth_orchid",
+      "detail": "Copied from plant_facts.json for moth_orchid."
+    }
+  },
+  {
+    "id": "moth_orchid_controller_family",
+    "plant_id": "moth_orchid",
+    "attribute_name": "controller_family",
+    "evidence_class": "legacy_migrated_value",
+    "value": "orchid_bark",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "moth_orchid",
+      "detail": "Copied from plant_facts.json for moth_orchid."
+    }
+  },
+  {
+    "id": "moth_orchid_migration_status",
+    "plant_id": "moth_orchid",
+    "attribute_name": "migration_status",
+    "evidence_class": "legacy_migrated_value",
+    "value": "accepted_manual",
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "moth_orchid",
+      "detail": "Copied from plant_facts.json for moth_orchid."
+    }
+  },
+  {
+    "id": "moth_orchid_manual_review_reasons",
+    "plant_id": "moth_orchid",
+    "attribute_name": "manual_review_reasons",
+    "evidence_class": "legacy_migrated_value",
+    "value": [
+      "legacy_category_orchid_requires_manual_review"
+    ],
+    "provenance": {
+      "source_file": "plant_facts.json",
+      "source_type": "plant_facts_record",
+      "source_record_id": "moth_orchid",
+      "detail": "Copied from plant_facts.json for moth_orchid."
+    }
+  },
+  {
+    "id": "moth_orchid_replay_blocked_by_manual_review",
+    "plant_id": "moth_orchid",
+    "attribute_name": "replay_blocked_by_manual_review",
+    "evidence_class": "replay_derived_observation",
+    "value": 2,
+    "provenance": {
+      "source_file": "tests/fixtures/moth_orchid_manual_review.json",
+      "source_type": "replay_fixture",
+      "source_scenario_id": "moth_orchid_manual_review",
+      "detail": "Derived from the replay summary for moth_orchid_manual_review."
+    }
+  },
+  {
+    "id": "moth_orchid_replay_total_watering_events",
+    "plant_id": "moth_orchid",
+    "attribute_name": "replay_total_watering_events",
+    "evidence_class": "replay_derived_observation",
+    "value": 0,
+    "provenance": {
+      "source_file": "tests/fixtures/moth_orchid_manual_review.json",
+      "source_type": "replay_fixture",
+      "source_scenario_id": "moth_orchid_manual_review",
+      "detail": "Derived from the replay summary for moth_orchid_manual_review."
+    }
+  },
+  {
+    "id": "moth_orchid_controller_autowater_enabled",
+    "plant_id": "moth_orchid",
+    "attribute_name": "controller_autowater_enabled",
+    "evidence_class": "controller_profile_value",
+    "value": false,
+    "provenance": {
+      "source_file": "controller_profiles.json",
+      "source_type": "controller_profile_record",
+      "source_controller_family": "orchid_bark",
+      "detail": "Copied from controller_profiles.json orchid_bark.autowater_enabled."
+    }
+  },
+  {
+    "id": "moth_orchid_controller_readiness",
+    "plant_id": "moth_orchid",
+    "attribute_name": "controller_readiness",
+    "evidence_class": "derived_inference",
+    "value": "blocked",
+    "provenance": {
+      "source_file": "evidence_records.json",
+      "source_type": "derived_from_evidence",
+      "supporting_evidence_ids": [
+        "moth_orchid_migration_status",
+        "moth_orchid_manual_review_reasons",
+        "moth_orchid_controller_autowater_enabled"
+      ],
+      "derivation": "accepted_manual records remain blocked for autowatering while controller behavior stays unchanged.",
+      "detail": "Explicit readiness inference for moth_orchid."
+    }
+  },
+  {
+    "id": "christmas_cactus_legacy_light_preference_lux",
+    "plant_id": "christmas_cactus",
+    "attribute_name": "legacy_light_preference_lux",
+    "evidence_class": "legacy_migrated_value",
+    "value": 10000,
+    "provenance": {
+      "source_file": "unresolved_species.json",
+      "source_type": "unresolved_species_record",
+      "source_record_id": "christmas_cactus",
+      "detail": "Copied from unresolved_species.json for christmas_cactus."
+    }
+  },
+  {
+    "id": "christmas_cactus_legacy_water_preference",
+    "plant_id": "christmas_cactus",
+    "attribute_name": "legacy_water_preference",
+    "evidence_class": "legacy_migrated_value",
+    "value": "evenly_moist",
+    "provenance": {
+      "source_file": "unresolved_species.json",
+      "source_type": "unresolved_species_record",
+      "source_record_id": "christmas_cactus",
+      "detail": "Copied from unresolved_species.json for christmas_cactus."
+    }
+  },
+  {
+    "id": "christmas_cactus_unresolved_reasons",
+    "plant_id": "christmas_cactus",
+    "attribute_name": "unresolved_reasons",
+    "evidence_class": "legacy_migrated_value",
+    "value": [
+      "unsupported_legacy_category_water_preference_combination"
+    ],
+    "provenance": {
+      "source_file": "unresolved_species.json",
+      "source_type": "unresolved_species_record",
+      "source_record_id": "christmas_cactus",
+      "detail": "Copied from unresolved_species.json for christmas_cactus."
+    }
+  },
+  {
+    "id": "christmas_cactus_replay_unresolved_species_rejections",
+    "plant_id": "christmas_cactus",
+    "attribute_name": "replay_unresolved_species_rejections",
+    "evidence_class": "replay_derived_observation",
+    "value": 1,
+    "provenance": {
+      "source_file": "tests/fixtures/unresolved_species_rejection.json",
+      "source_type": "replay_fixture",
+      "source_scenario_id": "unresolved_species_rejection",
+      "detail": "Derived from the replay summary for unresolved_species_rejection."
+    }
+  },
+  {
+    "id": "christmas_cactus_controller_readiness",
+    "plant_id": "christmas_cactus",
+    "attribute_name": "controller_readiness",
+    "evidence_class": "derived_inference",
+    "value": "blocked",
+    "provenance": {
+      "source_file": "evidence_records.json",
+      "source_type": "derived_from_evidence",
+      "supporting_evidence_ids": [
+        "christmas_cactus_unresolved_reasons"
+      ],
+      "derivation": "An unresolved species record cannot be treated as controller_ready.",
+      "detail": "Explicit readiness inference for christmas_cactus."
+    }
+  }
+]

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plant_attributes.schema.json",
+  "title": "Bloom Pot Derived Plant Attributes",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "plant_id",
+      "evidence_record_count",
+      "controller_status",
+      "controller_block_reasons",
+      "attributes"
+    ],
+    "properties": {
+      "plant_id": {
+        "type": "string",
+        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+      },
+      "evidence_record_count": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "controller_status": {
+        "type": "string",
+        "enum": [
+          "controller_ready",
+          "blocked"
+        ]
+      },
+      "controller_block_reasons": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "uniqueItems": true
+      },
+      "attributes": {
+        "type": "object",
+        "minProperties": 1,
+        "propertyNames": {
+          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "status",
+            "value",
+            "evidence_ids",
+            "blocked_reasons"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "supported",
+                "blocked"
+              ]
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": [
+                    "string",
+                    "number",
+                    "boolean",
+                    "null"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              ]
+            },
+            "evidence_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+              }
+            },
+            "blocked_reasons": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
