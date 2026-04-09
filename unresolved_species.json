@@ -3,48 +3,183 @@
     "id": "christmas_cactus",
     "common_name": "Christmas Cactus",
     "scientific_name": "Schlumbergera bridgesii",
-    "legacy_category": "succulent",
-    "legacy_light_preference_lux": 10000,
-    "legacy_water_preference": "evenly_moist",
-    "unresolved_reasons": [
-      "unsupported_legacy_category_water_preference_combination"
-    ],
-    "provenance": {
+    "identity_provenance": {
       "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
       "source_type": "legacy_backup_record",
       "match_type": "exact_common_name_and_scientific_name"
+    },
+    "supporting_attributes": [
+      {
+        "name": "legacy_category",
+        "value": "succulent",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "category"
+        }
+      },
+      {
+        "name": "legacy_light_preference_lux",
+        "value": 10000,
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": false,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "lightPreference"
+        }
+      },
+      {
+        "name": "legacy_water_preference",
+        "value": "evenly_moist",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "waterPreference"
+        }
+      }
+    ],
+    "resolution_status": {
+      "evidence_level": "unresolved",
+      "unresolved_reasons": [
+        "unsupported_legacy_category_water_preference_combination"
+      ],
+      "derived_from_attributes": [
+        "legacy_category",
+        "legacy_water_preference"
+      ],
+      "provenance": {
+        "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+        "source_type": "legacy_backup_record",
+        "match_type": "exact_common_name_and_scientific_name",
+        "rule_id": "unresolved_after_legacy_rule_evaluation"
+      }
     }
   },
   {
     "id": "easter_cactus",
     "common_name": "Easter Cactus",
     "scientific_name": "Hatiora gaertneri",
-    "legacy_category": "succulent",
-    "legacy_light_preference_lux": 10000,
-    "legacy_water_preference": "evenly_moist",
-    "unresolved_reasons": [
-      "unsupported_legacy_category_water_preference_combination"
-    ],
-    "provenance": {
+    "identity_provenance": {
       "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
       "source_type": "legacy_backup_record",
       "match_type": "exact_common_name_and_scientific_name"
+    },
+    "supporting_attributes": [
+      {
+        "name": "legacy_category",
+        "value": "succulent",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "category"
+        }
+      },
+      {
+        "name": "legacy_light_preference_lux",
+        "value": 10000,
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": false,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "lightPreference"
+        }
+      },
+      {
+        "name": "legacy_water_preference",
+        "value": "evenly_moist",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "waterPreference"
+        }
+      }
+    ],
+    "resolution_status": {
+      "evidence_level": "unresolved",
+      "unresolved_reasons": [
+        "unsupported_legacy_category_water_preference_combination"
+      ],
+      "derived_from_attributes": [
+        "legacy_category",
+        "legacy_water_preference"
+      ],
+      "provenance": {
+        "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+        "source_type": "legacy_backup_record",
+        "match_type": "exact_common_name_and_scientific_name",
+        "rule_id": "unresolved_after_legacy_rule_evaluation"
+      }
     }
   },
   {
     "id": "orchid_cactus",
     "common_name": "Orchid Cactus",
     "scientific_name": "Disocactus ackermannii",
-    "legacy_category": "succulent",
-    "legacy_light_preference_lux": 10000,
-    "legacy_water_preference": "evenly_moist",
-    "unresolved_reasons": [
-      "unsupported_legacy_category_water_preference_combination"
-    ],
-    "provenance": {
+    "identity_provenance": {
       "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
       "source_type": "legacy_backup_record",
       "match_type": "exact_common_name_and_scientific_name"
+    },
+    "supporting_attributes": [
+      {
+        "name": "legacy_category",
+        "value": "succulent",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "category"
+        }
+      },
+      {
+        "name": "legacy_light_preference_lux",
+        "value": 10000,
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": false,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "lightPreference"
+        }
+      },
+      {
+        "name": "legacy_water_preference",
+        "value": "evenly_moist",
+        "evidence_level": "legacy_backed",
+        "used_for_controller_mapping": true,
+        "provenance": {
+          "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+          "source_type": "legacy_backup_record",
+          "source_field": "waterPreference"
+        }
+      }
+    ],
+    "resolution_status": {
+      "evidence_level": "unresolved",
+      "unresolved_reasons": [
+        "unsupported_legacy_category_water_preference_combination"
+      ],
+      "derived_from_attributes": [
+        "legacy_category",
+        "legacy_water_preference"
+      ],
+      "provenance": {
+        "source_file": "bloom_plant_schema.json.legacy-20260329-2145.bak",
+        "source_type": "legacy_backup_record",
+        "match_type": "exact_common_name_and_scientific_name",
+        "rule_id": "unresolved_after_legacy_rule_evaluation"
+      }
     }
   }
 ]

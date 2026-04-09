@@ -10,15 +10,9 @@
       "id",
       "common_name",
       "scientific_name",
-      "legacy_category",
-      "legacy_light_preference_lux",
-      "legacy_water_preference",
+      "identity_provenance",
       "controller_family",
-      "controller_family_confidence",
-      "migration_status",
-      "special_handling",
-      "manual_review_reasons",
-      "provenance"
+      "controller_assignment"
     ],
     "properties": {
       "id": {
@@ -33,93 +27,135 @@
         "type": "string",
         "minLength": 1
       },
-      "legacy_category": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-      },
-      "legacy_light_preference_lux": {
-        "type": [
-          "integer",
-          "null"
-        ],
-        "minimum": 0
-      },
-      "legacy_water_preference": {
-        "type": [
-          "string",
-          "null"
-        ],
-        "enum": [
-          "evenly_moist",
-          "dry_between",
-          "drought_tolerant",
-          "constantly_moist",
-          null
-        ]
+      "identity_provenance": {
+        "$ref": "#/$defs/identityProvenance"
       },
       "controller_family": {
         "type": "string",
         "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
       },
-      "controller_family_confidence": {
-        "type": "string",
-        "enum": [
-          "legacy_direct",
-          "legacy_rule_based",
-          "manual_review"
-        ]
-      },
-      "migration_status": {
-        "type": "string",
-        "enum": [
-          "accepted_auto",
-          "accepted_manual"
-        ]
-      },
-      "special_handling": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-        },
-        "uniqueItems": true
-      },
-      "manual_review_reasons": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-        },
-        "uniqueItems": true
-      },
-      "provenance": {
+      "controller_assignment": {
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "source_file",
-          "source_type",
-          "match_type"
+          "review_status",
+          "evidence_level",
+          "derived_from_attributes",
+          "special_handling",
+          "manual_review_reasons",
+          "provenance"
         ],
         "properties": {
-          "source_file": {
-            "type": "string",
-            "minLength": 1
-          },
-          "source_type": {
+          "review_status": {
             "type": "string",
             "enum": [
-              "legacy_backup_record"
+              "accepted_auto",
+              "accepted_manual"
             ]
           },
-          "match_type": {
-            "type": "string",
-            "enum": [
-              "exact_common_name_and_scientific_name"
-            ]
+          "evidence_level": {
+            "$ref": "#/$defs/evidenceLevel"
+          },
+          "derived_from_attributes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "legacy_category",
+                "legacy_light_preference_lux",
+                "legacy_water_preference"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "special_handling": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+            },
+            "uniqueItems": true
+          },
+          "manual_review_reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+            },
+            "uniqueItems": true
+          },
+          "provenance": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_file",
+              "source_type",
+              "match_type",
+              "rule_id"
+            ],
+            "properties": {
+              "source_file": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "type": "string",
+                "enum": [
+                  "legacy_backup_record"
+                ]
+              },
+              "match_type": {
+                "type": "string",
+                "enum": [
+                  "exact_common_name_and_scientific_name"
+                ]
+              },
+              "rule_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
+              }
+            }
           }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "evidenceLevel": {
+      "type": "string",
+      "enum": [
+        "legacy_backed",
+        "experimentally_observed",
+        "literature_backed",
+        "inferred",
+        "unresolved"
+      ]
+    },
+    "identityProvenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_file",
+        "source_type",
+        "match_type"
+      ],
+      "properties": {
+        "source_file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "legacy_backup_record"
+          ]
+        },
+        "match_type": {
+          "type": "string",
+          "enum": [
+            "exact_common_name_and_scientific_name"
+          ]
         }
       }
     }

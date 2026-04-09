@@ -11,6 +11,8 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 MODULE_PATH = BASE_DIR / "bloom_controller.py"
 PLANT_FACTS_PATH = BASE_DIR / "plant_facts.json"
 PLANT_FACTS_SCHEMA_PATH = BASE_DIR / "plant_facts.schema.json"
+PLANT_ATTRIBUTES_PATH = BASE_DIR / "plant_attributes.json"
+PLANT_ATTRIBUTES_SCHEMA_PATH = BASE_DIR / "plant_attributes.schema.json"
 UNRESOLVED_SPECIES_PATH = BASE_DIR / "unresolved_species.json"
 UNRESOLVED_SPECIES_SCHEMA_PATH = BASE_DIR / "unresolved_species.schema.json"
 LEGACY_PATH = BASE_DIR / "bloom_plant_schema.json.legacy-20260329-2145.bak"
@@ -49,43 +51,155 @@ def validate_schema(payload, schema_path):
 
 
 def build_plant_record(**overrides):
+    legacy_category = overrides.pop("legacy_category", "tropical")
+    legacy_light_preference_lux = overrides.pop("legacy_light_preference_lux", 1000)
+    legacy_water_preference = overrides.pop("legacy_water_preference", "evenly_moist")
+    review_status = overrides.pop("migration_status", "accepted_auto")
+    manual_review_reasons = overrides.pop("manual_review_reasons", [])
+    special_handling = overrides.pop("special_handling", [])
+    evidence_level = overrides.pop("controller_assignment_evidence_level", "inferred")
+    overrides.pop("controller_family_confidence", None)
+    controller_assignment = overrides.pop("controller_assignment", None)
+    identity_provenance = overrides.pop("identity_provenance", None)
     record = {
         "id": "test_plant",
         "common_name": "Test Plant",
         "scientific_name": "Testus plantus",
-        "legacy_category": "tropical",
-        "legacy_light_preference_lux": 1000,
-        "legacy_water_preference": "evenly_moist",
-        "controller_family": "soil_even_moist",
-        "controller_family_confidence": "legacy_rule_based",
-        "migration_status": "accepted_auto",
-        "special_handling": [],
-        "manual_review_reasons": [],
-        "provenance": {
+        "identity_provenance": identity_provenance
+        or {
             "source_file": "legacy.json",
             "source_type": "legacy_backup_record",
             "match_type": "exact_common_name_and_scientific_name",
+        },
+        "controller_family": "soil_even_moist",
+        "controller_assignment": controller_assignment
+        or {
+            "review_status": review_status,
+            "evidence_level": evidence_level,
+            "derived_from_attributes": ["legacy_category", "legacy_water_preference"],
+            "special_handling": special_handling,
+            "manual_review_reasons": manual_review_reasons,
+            "provenance": {
+                "source_file": "legacy.json",
+                "source_type": "legacy_backup_record",
+                "match_type": "exact_common_name_and_scientific_name",
+                "rule_id": "soil_even_moist_from_legacy_category_and_water_preference",
+            },
         },
     }
     record.update(overrides)
     return record
 
 
+def build_attribute_bundle(plant_record=None, **overrides):
+    plant_record = plant_record or build_plant_record()
+    legacy_attributes = {
+        "legacy_category": overrides.pop("legacy_category", "tropical"),
+        "legacy_light_preference_lux": overrides.pop("legacy_light_preference_lux", 1000),
+        "legacy_water_preference": overrides.pop("legacy_water_preference", "evenly_moist"),
+    }
+    return {
+        "plant_id": plant_record["id"],
+        "attributes": [
+            {
+                "name": "legacy_category",
+                "value": legacy_attributes.get("legacy_category"),
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": True,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "category",
+                },
+            },
+            {
+                "name": "legacy_light_preference_lux",
+                "value": legacy_attributes.get("legacy_light_preference_lux"),
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": False,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "lightPreference",
+                },
+            },
+            {
+                "name": "legacy_water_preference",
+                "value": legacy_attributes.get("legacy_water_preference"),
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": True,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "waterPreference",
+                },
+            },
+        ],
+    }
+
+
 def build_unresolved_record(**overrides):
+    legacy_category = overrides.pop("legacy_category", "succulent")
+    legacy_light_preference_lux = overrides.pop("legacy_light_preference_lux", 1000)
+    legacy_water_preference = overrides.pop("legacy_water_preference", "evenly_moist")
+    unresolved_reasons = overrides.pop(
+        "unresolved_reasons",
+        ["unsupported_legacy_category_water_preference_combination"],
+    )
     record = {
         "id": "unresolved_plant",
         "common_name": "Unresolved Plant",
         "scientific_name": "Unresolved plantus",
-        "legacy_category": "succulent",
-        "legacy_light_preference_lux": 1000,
-        "legacy_water_preference": "evenly_moist",
-        "unresolved_reasons": [
-            "unsupported_legacy_category_water_preference_combination"
-        ],
-        "provenance": {
+        "identity_provenance": {
             "source_file": "legacy.json",
             "source_type": "legacy_backup_record",
             "match_type": "exact_common_name_and_scientific_name",
+        },
+        "supporting_attributes": [
+            {
+                "name": "legacy_category",
+                "value": legacy_category,
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": True,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "category",
+                },
+            },
+            {
+                "name": "legacy_light_preference_lux",
+                "value": legacy_light_preference_lux,
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": False,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "lightPreference",
+                },
+            },
+            {
+                "name": "legacy_water_preference",
+                "value": legacy_water_preference,
+                "evidence_level": "legacy_backed",
+                "used_for_controller_mapping": True,
+                "provenance": {
+                    "source_file": "legacy.json",
+                    "source_type": "legacy_backup_record",
+                    "source_field": "waterPreference",
+                },
+            },
+        ],
+        "resolution_status": {
+            "evidence_level": "unresolved",
+            "unresolved_reasons": unresolved_reasons,
+            "derived_from_attributes": ["legacy_category", "legacy_water_preference"],
+            "provenance": {
+                "source_file": "legacy.json",
+                "source_type": "legacy_backup_record",
+                "match_type": "exact_common_name_and_scientific_name",
+                "rule_id": "unresolved_after_legacy_rule_evaluation",
+            },
         },
     }
     record.update(overrides)
@@ -114,14 +228,24 @@ def make_controller(
     tmp_path,
     *,
     plant_records=None,
+    plant_attributes=None,
     controller_profiles=None,
     unresolved_species=None,
     default_reservoir_ml=200.0,
 ):
     plant_path = tmp_path / "plant_facts.json"
+    attributes_path = tmp_path / "plant_attributes.json"
     controller_path = tmp_path / "controller_profiles.json"
     unresolved_path = tmp_path / "unresolved_species.json"
-    write_json(plant_path, plant_records or [build_plant_record()])
+    resolved_records = plant_records or [build_plant_record()]
+    attribute_bundles = plant_attributes
+    if attribute_bundles is None:
+        attribute_bundles = [
+            build_attribute_bundle(record)
+            for record in resolved_records
+        ]
+    write_json(plant_path, resolved_records)
+    write_json(attributes_path, attribute_bundles)
     write_json(
         controller_path,
         controller_profiles or {"soil_even_moist": build_controller_profile()},
@@ -129,6 +253,7 @@ def make_controller(
     write_json(unresolved_path, unresolved_species or [])
     return BloomPotController(
         plant_facts_path=plant_path,
+        plant_attributes_path=attributes_path,
         controller_profiles_path=controller_path,
         unresolved_species_path=unresolved_path,
         default_reservoir_ml=default_reservoir_ml,
@@ -593,18 +718,24 @@ def test_invalid_plant_schema_fails_loudly(tmp_path):
                 "id": "test_plant",
                 "common_name": "Test Plant",
                 "scientific_name": "Testus plantus",
-                "legacy_category": "tropical",
-                "legacy_light_preference_lux": 1000,
-                "legacy_water_preference": "evenly_moist",
-                "controller_family": "soil_even_moist",
-                "controller_family_confidence": "legacy_rule_based",
-                "migration_status": "accepted_auto",
-                "special_handling": "manual_review_required",
-                "manual_review_reasons": [],
-                "provenance": {
+                "identity_provenance": {
                     "source_file": "legacy.json",
                     "source_type": "legacy_backup_record",
                     "match_type": "exact_common_name_and_scientific_name",
+                },
+                "controller_family": "soil_even_moist",
+                "controller_assignment": {
+                    "review_status": "accepted_auto",
+                    "evidence_level": "inferred",
+                    "derived_from_attributes": ["legacy_category", "legacy_water_preference"],
+                    "special_handling": "manual_review_required",
+                    "manual_review_reasons": [],
+                    "provenance": {
+                        "source_file": "legacy.json",
+                        "source_type": "legacy_backup_record",
+                        "match_type": "exact_common_name_and_scientific_name",
+                        "rule_id": "soil_even_moist_from_legacy_category_and_water_preference",
+                    },
                 },
             }
         ],
@@ -625,13 +756,16 @@ def test_invalid_plant_schema_fails_loudly(tmp_path):
 
 def test_unknown_controller_family_reference_fails_loudly(tmp_path):
     plant_path = tmp_path / "plant_facts.json"
+    attributes_path = tmp_path / "plant_attributes.json"
     controller_path = tmp_path / "controller_profiles.json"
     unresolved_path = tmp_path / "unresolved_species.json"
 
+    record = build_plant_record(controller_family="missing_family")
     write_json(
         plant_path,
-        [build_plant_record(controller_family="missing_family")],
+        [record],
     )
+    write_json(attributes_path, [build_attribute_bundle(record)])
     write_json(
         controller_path,
         {"soil_even_moist": build_controller_profile()},
@@ -641,17 +775,21 @@ def test_unknown_controller_family_reference_fails_loudly(tmp_path):
     with pytest.raises(ModelValidationError, match="unknown controller family"):
         BloomPotController(
             plant_facts_path=plant_path,
+            plant_attributes_path=attributes_path,
             controller_profiles_path=controller_path,
             unresolved_species_path=unresolved_path,
         )
 
 
 def test_invalid_controller_profile_thresholds_fail_loudly(tmp_path):
+    attributes_path = tmp_path / "plant_attributes.json"
     controller_path = tmp_path / "controller_profiles.json"
     plant_path = tmp_path / "plant_facts.json"
     unresolved_path = tmp_path / "unresolved_species.json"
 
-    write_json(plant_path, [build_plant_record()])
+    record = build_plant_record()
+    write_json(plant_path, [record])
+    write_json(attributes_path, [build_attribute_bundle(record)])
     write_json(
         controller_path,
         {
@@ -665,6 +803,7 @@ def test_invalid_controller_profile_thresholds_fail_loudly(tmp_path):
     with pytest.raises(ModelValidationError, match="inconsistent moisture thresholds"):
         BloomPotController(
             plant_facts_path=plant_path,
+            plant_attributes_path=attributes_path,
             controller_profiles_path=controller_path,
             unresolved_species_path=unresolved_path,
         )
@@ -688,11 +827,14 @@ def test_controller_profile_invariants_fail_loudly(
     profile_overrides,
     expected_error,
 ):
+    attributes_path = tmp_path / "plant_attributes.json"
     plant_path = tmp_path / "plant_facts.json"
     controller_path = tmp_path / "controller_profiles.json"
     unresolved_path = tmp_path / "unresolved_species.json"
 
-    write_json(plant_path, [build_plant_record()])
+    record = build_plant_record()
+    write_json(plant_path, [record])
+    write_json(attributes_path, [build_attribute_bundle(record)])
     write_json(
         controller_path,
         {"soil_even_moist": build_controller_profile(**profile_overrides)},
@@ -702,6 +844,7 @@ def test_controller_profile_invariants_fail_loudly(
     with pytest.raises(ModelValidationError, match=expected_error):
         BloomPotController(
             plant_facts_path=plant_path,
+            plant_attributes_path=attributes_path,
             controller_profiles_path=controller_path,
             unresolved_species_path=unresolved_path,
         )
@@ -801,28 +944,75 @@ def test_unresolved_species_file_shape():
     errors = validate_schema(unresolved_species, UNRESOLVED_SPECIES_SCHEMA_PATH)
 
     assert errors == []
-    assert all(record["unresolved_reasons"] for record in unresolved_species)
+    assert all(record["resolution_status"]["unresolved_reasons"] for record in unresolved_species)
 
 
-def test_controller_family_confidence_enum_handling():
+def test_plant_attributes_file_shape():
+    plant_attributes = load_json(PLANT_ATTRIBUTES_PATH)
+    errors = validate_schema(plant_attributes, PLANT_ATTRIBUTES_SCHEMA_PATH)
+
+    assert errors == []
+    assert len(plant_attributes) > 10
+    assert all(record["attributes"] for record in plant_attributes)
+
+
+def test_controller_assignment_evidence_level_enum_handling():
     base_record = build_plant_record()
 
-    for confidence in ("legacy_direct", "legacy_rule_based", "manual_review"):
-        payload = [{**base_record, "controller_family_confidence": confidence}]
+    for evidence_level in (
+        "legacy_backed",
+        "experimentally_observed",
+        "literature_backed",
+        "inferred",
+        "unresolved",
+    ):
+        payload = [
+            {
+                **base_record,
+                "controller_assignment": {
+                    **base_record["controller_assignment"],
+                    "evidence_level": evidence_level,
+                },
+            }
+        ]
         assert validate_schema(payload, PLANT_FACTS_SCHEMA_PATH) == []
 
-    invalid_payload = [{**base_record, "controller_family_confidence": "curated"}]
+    invalid_payload = [
+        {
+            **base_record,
+            "controller_assignment": {
+                **base_record["controller_assignment"],
+                "evidence_level": "curated",
+            },
+        }
+    ]
     assert validate_schema(invalid_payload, PLANT_FACTS_SCHEMA_PATH)
 
 
-def test_migration_status_enum_handling():
+def test_controller_assignment_review_status_enum_handling():
     base_record = build_plant_record()
 
     for status in ("accepted_auto", "accepted_manual"):
-        payload = [{**base_record, "migration_status": status}]
+        payload = [
+            {
+                **base_record,
+                "controller_assignment": {
+                    **base_record["controller_assignment"],
+                    "review_status": status,
+                },
+            }
+        ]
         assert validate_schema(payload, PLANT_FACTS_SCHEMA_PATH) == []
 
-    invalid_payload = [{**base_record, "migration_status": "unresolved"}]
+    invalid_payload = [
+        {
+            **base_record,
+            "controller_assignment": {
+                **base_record["controller_assignment"],
+                "review_status": "unresolved",
+            },
+        }
+    ]
     assert validate_schema(invalid_payload, PLANT_FACTS_SCHEMA_PATH)
 
 
@@ -832,17 +1022,18 @@ def test_catalog_controller_consistency():
     accepted_manual_ids = []
     for plant_id, record in controller.plant_facts.items():
         profile = controller.controller_profiles[record["controller_family"]]
-        if record["migration_status"] == "accepted_auto":
-            assert "manual_review_required" not in record["special_handling"]
-            assert record["manual_review_reasons"] == []
-            assert record["controller_family_confidence"] != "manual_review"
+        assignment = record["controller_assignment"]
+        if assignment["review_status"] == "accepted_auto":
+            assert "manual_review_required" not in assignment["special_handling"]
+            assert assignment["manual_review_reasons"] == []
+            assert assignment["evidence_level"] == "inferred"
             assert profile["autowater_enabled"] is True
         else:
             accepted_manual_ids.append(plant_id)
-            assert record["migration_status"] == "accepted_manual"
-            assert "manual_review_required" in record["special_handling"]
-            assert record["manual_review_reasons"]
-            assert record["controller_family_confidence"] == "manual_review"
+            assert assignment["review_status"] == "accepted_manual"
+            assert "manual_review_required" in assignment["special_handling"]
+            assert assignment["manual_review_reasons"]
+            assert assignment["evidence_level"] == "inferred"
             assert profile["autowater_enabled"] is False
 
     assert len(accepted_manual_ids) == 10

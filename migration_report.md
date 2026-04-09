@@ -6,6 +6,8 @@
 - accepted_auto count: 155
 - accepted_manual count: 10
 - unresolved count: 3
+- accepted plant attribute bundles: 165
+- accepted attribute evidence records: 495
 
 ## Counts By Legacy Category
 
@@ -27,6 +29,37 @@
 - soil_even_moist: 83
 - succulent_fast_drain: 32
 
+## Evidence Levels Used
+
+- legacy_backed: 495
+
+## Quarantined Legacy Fields
+
+- The following legacy fields remain only in the backup and are not loaded into the active controller data model because this round does not claim biological validity for them:
+- `EMax`
+- `LMin`
+- `Q`
+- `RInit`
+- `SMax`
+- `WInit`
+- `WMin`
+- `alphaEvap`
+- `cH`
+- `cT`
+- `kL`
+- `kRL`
+- `kRT`
+- `kRW`
+- `kSat`
+- `kT`
+- `kW`
+- `nRetention`
+- `p`
+- `tauSat`
+- `thetaCrit`
+- `thetaFc`
+- `thetaWp`
+
 ## Manual-Review Species
 
 - Cape Sundew (`cape_sundew`): bog_carnivorous [legacy_category_carnivorous_requires_manual_review]
@@ -42,13 +75,13 @@
 
 ## Mapping Rules Used
 
-- `category = succulent AND waterPreference in {drought_tolerant,dry_between}` -> `controller_family = succulent_fast_drain, controller_family_confidence = legacy_rule_based, migration_status = accepted_auto`
-- `category = fern AND waterPreference in {evenly_moist,constantly_moist}` -> `controller_family = fern_high_moisture, controller_family_confidence = legacy_rule_based, migration_status = accepted_auto`
-- `category in {tropical,bulb,herb,edible} AND waterPreference = evenly_moist` -> `controller_family = soil_even_moist, controller_family_confidence = legacy_rule_based, migration_status = accepted_auto`
-- `category in {tropical,bulb,herb,edible} AND waterPreference = dry_between` -> `controller_family = soil_dry_between, controller_family_confidence = legacy_rule_based, migration_status = accepted_auto`
-- `category = orchid` -> `controller_family = orchid_bark, controller_family_confidence = manual_review, migration_status = accepted_manual`
-- `category = carnivorous` -> `controller_family = bog_carnivorous, controller_family_confidence = manual_review, migration_status = accepted_manual`
-- `anything else unresolved` -> `write to unresolved_species.json with explicit reasons and no controller_family`
+- `category = succulent AND waterPreference in {drought_tolerant,dry_between}` -> `controller_family = succulent_fast_drain, controller_assignment.review_status = accepted_auto, controller_assignment.evidence_level = inferred`
+- `category = fern AND waterPreference in {evenly_moist,constantly_moist}` -> `controller_family = fern_high_moisture, controller_assignment.review_status = accepted_auto, controller_assignment.evidence_level = inferred`
+- `category in {tropical,bulb,herb,edible} AND waterPreference = evenly_moist` -> `controller_family = soil_even_moist, controller_assignment.review_status = accepted_auto, controller_assignment.evidence_level = inferred`
+- `category in {tropical,bulb,herb,edible} AND waterPreference = dry_between` -> `controller_family = soil_dry_between, controller_assignment.review_status = accepted_auto, controller_assignment.evidence_level = inferred`
+- `category = orchid` -> `controller_family = orchid_bark, controller_assignment.review_status = accepted_manual, controller_assignment.evidence_level = inferred`
+- `category = carnivorous` -> `controller_family = bog_carnivorous, controller_assignment.review_status = accepted_manual, controller_assignment.evidence_level = inferred`
+- `anything else unresolved` -> `write to unresolved_species.json with resolution_status.evidence_level = unresolved and explicit supporting_attributes`
 
 ## Unresolved Species
 

@@ -184,6 +184,7 @@ def _build_candidate_controller(
         )
         BloomPotController._validate_model_relationships(
             baseline_controller.plant_facts,
+            baseline_controller.plant_attributes,
             candidate_profiles,
             baseline_controller.unresolved_species,
         )
@@ -193,6 +194,7 @@ def _build_candidate_controller(
     candidate_controller = BloomPotController.__new__(BloomPotController)
     candidate_controller.controller_profiles = candidate_profiles
     candidate_controller.plant_facts = baseline_controller.plant_facts
+    candidate_controller.plant_attributes = baseline_controller.plant_attributes
     candidate_controller.unresolved_species = baseline_controller.unresolved_species
     candidate_controller.default_reservoir_ml = baseline_controller.default_reservoir_ml
     return candidate_controller, normalized_overrides

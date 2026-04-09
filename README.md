@@ -1,14 +1,16 @@
 # Bloom Pot Refactor
 
-`plant_facts.json` contains the accepted migrated plant catalog. Each record stores only identity, legacy-backed evidence fields, migration metadata, normalized `special_handling` tags, explicit `manual_review_reasons`, and provenance.
+`plant_facts.json` contains the accepted plant catalog used by the controller. Each record now stores only stable plant identity plus controller assignment state, with nested provenance and an explicit controller-assignment `evidence_level`.
 
-`unresolved_species.json` contains legacy species that could not be mapped into an existing controller family by the explicit migration rules. These records preserve only the legacy-backed evidence fields, explicit unresolved reason tags, and provenance.
+`plant_attributes.json` contains evidence-tagged plant attribute records for accepted plants. Each retained nontrivial attribute carries a `value`, `evidence_level`, `used_for_controller_mapping`, and provenance. In the current migrated data these retained attributes are legacy-backed imports, not curated biology claims.
+
+`unresolved_species.json` contains legacy species that could not be mapped into an existing controller family by the explicit migration rules. These records keep identity, evidence-tagged supporting attributes, and an explicit `resolution_status` block with unresolved reasons and provenance.
 
 `controller_profiles.json` contains controller and hardware behavior only. Each profile now defines an explicit `moisture_target`, moisture cutoffs, fixed watering dose, cooldown, confirmation count, daily max dose, sensor model, substrate type, `autowater_enabled`, and any `manual_review_reasons`.
 
-`plant_facts.schema.json`, `unresolved_species.schema.json`, `controller_profiles.schema.json`, and `controller_replay.schema.json` are machine-readable JSON Schemas for the data files and replay fixtures.
+`plant_facts.schema.json`, `plant_attributes.schema.json`, `unresolved_species.schema.json`, `controller_profiles.schema.json`, and `controller_replay.schema.json` are machine-readable JSON Schemas for the data files and replay fixtures. The shared evidence levels are `legacy_backed`, `experimentally_observed`, `literature_backed`, `inferred`, and `unresolved`.
 
-`bloom_controller.py` validates both JSON files against those schemas, enforces cross-file consistency, then runs the persistent watering controller. It keeps state such as reservoir level, low-reading confirmations, last watering time, and daily dose usage, then returns a pump decision with an explicit reason. It also exposes deterministic scenario replay with per-step decision traces so controller behavior can be inspected without mutating the caller's starting state.
+`bloom_controller.py` validates `plant_facts.json`, `plant_attributes.json`, `unresolved_species.json`, and `controller_profiles.json` against those schemas, enforces cross-file consistency, then runs the persistent watering controller. It keeps state such as reservoir level, low-reading confirmations, last watering time, and daily dose usage, then returns a pump decision with an explicit reason. Controller numeric thresholds are unchanged in this round. It also exposes deterministic scenario replay with per-step decision traces so controller behavior can be inspected without mutating the caller's starting state.
 
 `bloom_evaluation.py` validates replay fixtures against `controller_replay.schema.json`, replays ordered timestamped moisture observations through the current controller, records each trace step, and emits summary metrics for watering events, blocks, and rejections.
 
@@ -20,7 +22,7 @@
 
 `DATA_MODEL_AUDIT.md` summarizes the schema audit, the field splits and removals, and the unresolved provenance limits that remain.
 
-`migrate_legacy_catalog.py` is the deterministic migration pipeline. It reads `bloom_plant_schema.json.legacy-20260329-2145.bak`, applies the explicit category and water-preference mapping rules, writes `plant_facts.json`, `unresolved_species.json`, and `migration_report.md`, then validates the generated JSON against the schemas.
+`migrate_legacy_catalog.py` is the deterministic migration pipeline. It reads `bloom_plant_schema.json.legacy-20260329-2145.bak`, applies the explicit category and water-preference mapping rules, writes `plant_facts.json`, `plant_attributes.json`, `unresolved_species.json`, and `migration_report.md`, then validates the generated JSON against the schemas. Legacy controller-era biology constants from the backup remain quarantined in the backup/report only; they are not loaded into the active controller model.
 
 Run the tests with:
 

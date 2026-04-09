@@ -1,144 +1,30 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "unresolved_species.schema.json",
-  "title": "Bloom Pot Unresolved Species",
+  "$id": "plant_attributes.schema.json",
+  "title": "Bloom Pot Plant Attributes",
   "type": "array",
   "items": {
     "type": "object",
     "additionalProperties": false,
     "required": [
-      "id",
-      "common_name",
-      "scientific_name",
-      "identity_provenance",
-      "supporting_attributes",
-      "resolution_status"
+      "plant_id",
+      "attributes"
     ],
     "properties": {
-      "id": {
+      "plant_id": {
         "type": "string",
         "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
       },
-      "common_name": {
-        "type": "string",
-        "minLength": 1
-      },
-      "scientific_name": {
-        "type": "string",
-        "minLength": 1
-      },
-      "identity_provenance": {
-        "$ref": "#/$defs/identityProvenance"
-      },
-      "supporting_attributes": {
+      "attributes": {
         "type": "array",
         "minItems": 1,
         "items": {
           "$ref": "#/$defs/attributeRecord"
         }
-      },
-      "resolution_status": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "evidence_level",
-          "unresolved_reasons",
-          "derived_from_attributes",
-          "provenance"
-        ],
-        "properties": {
-          "evidence_level": {
-            "type": "string",
-            "enum": [
-              "unresolved"
-            ]
-          },
-          "unresolved_reasons": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string",
-              "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-            },
-            "uniqueItems": true
-          },
-          "derived_from_attributes": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-              "type": "string",
-              "enum": [
-                "legacy_category",
-                "legacy_light_preference_lux",
-                "legacy_water_preference"
-              ]
-            },
-            "uniqueItems": true
-          },
-          "provenance": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "source_file",
-              "source_type",
-              "match_type",
-              "rule_id"
-            ],
-            "properties": {
-              "source_file": {
-                "type": "string",
-                "minLength": 1
-              },
-              "source_type": {
-                "type": "string",
-                "enum": [
-                  "legacy_backup_record"
-                ]
-              },
-              "match_type": {
-                "type": "string",
-                "enum": [
-                  "exact_common_name_and_scientific_name"
-                ]
-              },
-              "rule_id": {
-                "type": "string",
-                "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$"
-              }
-            }
-          }
-        }
       }
     }
   },
   "$defs": {
-    "identityProvenance": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "source_file",
-        "source_type",
-        "match_type"
-      ],
-      "properties": {
-        "source_file": {
-          "type": "string",
-          "minLength": 1
-        },
-        "source_type": {
-          "type": "string",
-          "enum": [
-            "legacy_backup_record"
-          ]
-        },
-        "match_type": {
-          "type": "string",
-          "enum": [
-            "exact_common_name_and_scientific_name"
-          ]
-        }
-      }
-    },
     "evidenceLevel": {
       "type": "string",
       "enum": [

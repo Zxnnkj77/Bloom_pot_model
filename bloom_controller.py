@@ -12,8 +12,10 @@ from jsonschema import Draft202012Validator
 
 BASE_DIR = Path(__file__).resolve().parent
 PLANT_FACTS_PATH = BASE_DIR / "plant_facts.json"
+PLANT_ATTRIBUTES_PATH = BASE_DIR / "plant_attributes.json"
 CONTROLLER_PROFILES_PATH = BASE_DIR / "controller_profiles.json"
 PLANT_FACTS_SCHEMA_PATH = BASE_DIR / "plant_facts.schema.json"
+PLANT_ATTRIBUTES_SCHEMA_PATH = BASE_DIR / "plant_attributes.schema.json"
 CONTROLLER_PROFILES_SCHEMA_PATH = BASE_DIR / "controller_profiles.schema.json"
 UNRESOLVED_SPECIES_PATH = BASE_DIR / "unresolved_species.json"
 UNRESOLVED_SPECIES_SCHEMA_PATH = BASE_DIR / "unresolved_species.schema.json"
@@ -137,6 +139,7 @@ class BloomPotController:
     def __init__(
         self,
         plant_facts_path: str | Path = PLANT_FACTS_PATH,
+        plant_attributes_path: str | Path = PLANT_ATTRIBUTES_PATH,
         controller_profiles_path: str | Path = CONTROLLER_PROFILES_PATH,
         unresolved_species_path: str | Path = UNRESOLVED_SPECIES_PATH,
         *,
@@ -144,9 +147,11 @@ class BloomPotController:
     ) -> None:
         self.controller_profiles = self._load_controller_profiles(controller_profiles_path)
         self.plant_facts = self._load_plant_facts(plant_facts_path)
+        self.plant_attributes = self._load_plant_attributes(plant_attributes_path)
         self.unresolved_species = self._load_unresolved_species(unresolved_species_path)
         self._validate_model_relationships(
             self.plant_facts,
+            self.plant_attributes,
             self.controller_profiles,
             self.unresolved_species,
         )
@@ -166,6 +171,25 @@ class BloomPotController:
             if plant_id in records:
                 raise ModelValidationError(f"Duplicate plant id found in {path}: {plant_id}")
             BloomPotController._validate_plant_record(record, data_path=path)
+            records[plant_id] = record
+        return records
+
+    @staticmethod
+    def _load_plant_attributes(path: str | Path) -> dict[str, dict[str, Any]]:
+        payload = json.loads(Path(path).read_text())
+        BloomPotController._validate_schema(
+            payload,
+            schema_path=PLANT_ATTRIBUTES_SCHEMA_PATH,
+            data_path=path,
+        )
+        records: dict[str, dict[str, Any]] = {}
+        for record in payload:
+            plant_id = record["plant_id"]
+            if plant_id in records:
+                raise ModelValidationError(
+                    f"Duplicate plant attribute bundle found in {path}: {plant_id}"
+                )
+            BloomPotController._validate_attribute_bundle(record, data_path=path)
             records[plant_id] = record
         return records
 
@@ -200,6 +224,7 @@ class BloomPotController:
                 raise ModelValidationError(
                     f"Duplicate unresolved species id found in {path}: {species_id}"
                 )
+            BloomPotController._validate_unresolved_record(record, data_path=path)
             records[species_id] = record
         return records
 
@@ -332,7 +357,9 @@ class BloomPotController:
         dose_ml = 0.0
         decision_code: str
 
-        if plant["migration_status"] == "accepted_manual":
+        assignment = plant["controller_assignment"]
+
+        if assignment["review_status"] == "accepted_manual":
             state.low_reading_count = 0
             decision_code = "manual_review_block"
             reasons.append("Plant record requires manual review; autowatering blocked.")
@@ -512,9 +539,15 @@ class BloomPotController:
 
     @staticmethod
     def _validate_plant_record(record: dict[str, Any], *, data_path: str | Path) -> None:
-        requires_review = "manual_review_required" in record["special_handling"]
-        has_reasons = bool(record["manual_review_reasons"])
-        if record["migration_status"] == "accepted_manual":
+        assignment = record["controller_assignment"]
+        requires_review = "manual_review_required" in assignment["special_handling"]
+        has_reasons = bool(assignment["manual_review_reasons"])
+        if assignment["evidence_level"] == "unresolved":
+            raise ModelValidationError(
+                f"Accepted plant record {record['id']} in {data_path} cannot use unresolved "
+                "controller assignment evidence."
+            )
+        if assignment["review_status"] == "accepted_manual":
             if not requires_review:
                 raise ModelValidationError(
                     f"Accepted manual plant record {record['id']} in {data_path} must include "
@@ -525,11 +558,6 @@ class BloomPotController:
                     f"Accepted manual plant record {record['id']} in {data_path} must include "
                     "at least one manual review reason."
                 )
-            if record["controller_family_confidence"] != "manual_review":
-                raise ModelValidationError(
-                    f"Accepted manual plant record {record['id']} in {data_path} must use "
-                    "manual_review controller_family_confidence."
-                )
         if requires_review and not has_reasons:
             raise ModelValidationError(
                 f"Plant record {record['id']} in {data_path} requires manual review reasons."
@@ -539,17 +567,36 @@ class BloomPotController:
                 f"Plant record {record['id']} in {data_path} has manual review reasons "
                 "without the manual_review_required tag."
             )
-        if record["migration_status"] == "accepted_auto":
+        if assignment["review_status"] == "accepted_auto":
             if requires_review:
                 raise ModelValidationError(
                     f"Accepted auto plant record {record['id']} in {data_path} cannot carry "
                     "manual-review-only tags."
                 )
-            if record["controller_family_confidence"] == "manual_review":
-                raise ModelValidationError(
-                    f"Accepted auto plant record {record['id']} in {data_path} cannot use "
-                    "manual_review controller_family_confidence."
-                )
+
+    @staticmethod
+    def _validate_attribute_bundle(record: dict[str, Any], *, data_path: str | Path) -> None:
+        attribute_names = [attribute["name"] for attribute in record["attributes"]]
+        if len(attribute_names) != len(set(attribute_names)):
+            raise ModelValidationError(
+                f"Plant attribute bundle {record['plant_id']} in {data_path} contains "
+                "duplicate attribute names."
+            )
+
+    @staticmethod
+    def _validate_unresolved_record(record: dict[str, Any], *, data_path: str | Path) -> None:
+        attribute_names = [attribute["name"] for attribute in record["supporting_attributes"]]
+        if len(attribute_names) != len(set(attribute_names)):
+            raise ModelValidationError(
+                f"Unresolved record {record['id']} in {data_path} contains duplicate "
+                "supporting attribute names."
+            )
+        resolution_status = record["resolution_status"]
+        if resolution_status["evidence_level"] != "unresolved":
+            raise ModelValidationError(
+                f"Unresolved record {record['id']} in {data_path} must use unresolved "
+                "resolution evidence."
+            )
 
     @staticmethod
     def _validate_controller_profile(
@@ -602,6 +649,7 @@ class BloomPotController:
     @staticmethod
     def _validate_model_relationships(
         plant_facts: dict[str, dict[str, Any]],
+        plant_attributes: dict[str, dict[str, Any]],
         controller_profiles: dict[str, dict[str, Any]],
         unresolved_species: dict[str, dict[str, Any]],
     ) -> None:
@@ -611,22 +659,57 @@ class BloomPotController:
                 "Accepted plant facts and unresolved species overlap: "
                 + ", ".join(overlapping_ids)
             )
+        if set(plant_attributes) != set(plant_facts):
+            missing_attributes = sorted(set(plant_facts).difference(plant_attributes))
+            orphan_attributes = sorted(set(plant_attributes).difference(plant_facts))
+            details: list[str] = []
+            if missing_attributes:
+                details.append(
+                    "missing plant attribute bundles for: " + ", ".join(missing_attributes)
+                )
+            if orphan_attributes:
+                details.append(
+                    "orphan plant attribute bundles for: " + ", ".join(orphan_attributes)
+                )
+            raise ModelValidationError(
+                "Plant facts and plant attributes are inconsistent: " + "; ".join(details)
+            )
         for plant_id, record in plant_facts.items():
             family = record["controller_family"]
             if family not in controller_profiles:
                 raise ModelValidationError(
                     f"Plant record {plant_id} references unknown controller family: {family}"
                 )
+            attribute_names = {
+                attribute["name"] for attribute in plant_attributes[plant_id]["attributes"]
+            }
+            derived_attributes = set(record["controller_assignment"]["derived_from_attributes"])
+            if not derived_attributes.issubset(attribute_names):
+                missing = sorted(derived_attributes.difference(attribute_names))
+                raise ModelValidationError(
+                    f"Plant record {plant_id} derives controller assignment from missing "
+                    f"attribute evidence: {', '.join(missing)}"
+                )
             profile = controller_profiles[family]
-            if record["migration_status"] == "accepted_auto" and not profile["autowater_enabled"]:
+            review_status = record["controller_assignment"]["review_status"]
+            if review_status == "accepted_auto" and not profile["autowater_enabled"]:
                 raise ModelValidationError(
                     f"Accepted auto plant record {plant_id} references manual-review "
                     f"controller family: {family}"
                 )
-            if record["migration_status"] == "accepted_manual" and profile["autowater_enabled"]:
+            if review_status == "accepted_manual" and profile["autowater_enabled"]:
                 raise ModelValidationError(
                     f"Accepted manual plant record {plant_id} references autowater-enabled "
                     f"controller family: {family}"
+                )
+        for plant_id, record in unresolved_species.items():
+            attribute_names = {attribute["name"] for attribute in record["supporting_attributes"]}
+            derived_attributes = set(record["resolution_status"]["derived_from_attributes"])
+            if not derived_attributes.issubset(attribute_names):
+                missing = sorted(derived_attributes.difference(attribute_names))
+                raise ModelValidationError(
+                    f"Unresolved plant record {plant_id} references missing supporting "
+                    f"attributes: {', '.join(missing)}"
                 )
 
 
@@ -636,10 +719,12 @@ def bloompot_step(
     *,
     state: ControllerState | dict[str, Any] | None = None,
     plant_facts_path: str | Path = PLANT_FACTS_PATH,
+    plant_attributes_path: str | Path = PLANT_ATTRIBUTES_PATH,
     controller_profiles_path: str | Path = CONTROLLER_PROFILES_PATH,
 ) -> dict[str, Any]:
     controller = BloomPotController(
         plant_facts_path=plant_facts_path,
+        plant_attributes_path=plant_attributes_path,
         controller_profiles_path=controller_profiles_path,
         default_reservoir_ml=float(sensor_data.get("reservoir_ml", 1000.0)),
     )
