@@ -2,11 +2,15 @@
 
 `plant_facts.json` contains the accepted migrated plant catalog. Each record stores only identity, legacy-backed evidence fields, migration metadata, normalized `special_handling` tags, explicit `manual_review_reasons`, and provenance.
 
+`evidence_records.json` is the append-only raw evidence log for plant attributes. Each record stores a plant id, attribute name, raw value, optional unit, explicit `evidence_class`, source metadata, timestamps, notes, and ingestion provenance.
+
+`plant_attributes.json` is the deterministic derived attribute catalog rebuilt from `evidence_records.json`. It keeps the latest record for each `plant_id` plus `attribute_name` pair, mirrors the selected evidence fields, and adds explicit controller blocking reasons. It is not used by the controller in Round 12.
+
 `unresolved_species.json` contains legacy species that could not be mapped into an existing controller family by the explicit migration rules. These records preserve only the legacy-backed evidence fields, explicit unresolved reason tags, and provenance.
 
 `controller_profiles.json` contains controller and hardware behavior only. Each profile now defines an explicit `moisture_target`, moisture cutoffs, fixed watering dose, cooldown, confirmation count, daily max dose, sensor model, substrate type, `autowater_enabled`, and any `manual_review_reasons`.
 
-`plant_facts.schema.json`, `unresolved_species.schema.json`, `controller_profiles.schema.json`, and `controller_replay.schema.json` are machine-readable JSON Schemas for the data files and replay fixtures.
+`plant_facts.schema.json`, `plant_attributes.schema.json`, `evidence_records.schema.json`, `unresolved_species.schema.json`, `controller_profiles.schema.json`, and `controller_replay.schema.json` are machine-readable JSON Schemas for the data files and replay fixtures.
 
 `bloom_controller.py` validates both JSON files against those schemas, enforces cross-file consistency, then runs the persistent watering controller. It keeps state such as reservoir level, low-reading confirmations, last watering time, and daily dose usage, then returns a pump decision with an explicit reason. It also exposes deterministic scenario replay with per-step decision traces so controller behavior can be inspected without mutating the caller's starting state.
 
@@ -18,6 +22,8 @@
 
 `bloom_calibration_workflow.py` adds Round 10 end-to-end orchestration. It validates and loads replay data, evaluates the current baseline controller, runs the offline calibration search, compares the ranked candidates against baseline on the same deterministic replay set, and exports a final workflow JSON object plus Markdown report. It stays offline, does not apply controller changes automatically, and exits nonzero when no candidate survives or no candidate beats baseline.
 
+`plant_evidence.py` adds Round 12 evidence ingestion scaffolding. It validates `evidence_records.json` and `plant_attributes.json` against their schemas plus the existing plant catalogs, rebuilds the derived attribute view deterministically with a latest-record-wins rule, and provides a one-record registration flow that appends validated evidence and rewrites `plant_attributes.json`. Controller thresholds and runtime behavior remain unchanged in this round.
+
 `DATA_MODEL_AUDIT.md` summarizes the schema audit, the field splits and removals, and the unresolved provenance limits that remain.
 
 `migrate_legacy_catalog.py` is the deterministic migration pipeline. It reads `bloom_plant_schema.json.legacy-20260329-2145.bak`, applies the explicit category and water-preference mapping rules, writes `plant_facts.json`, `unresolved_species.json`, and `migration_report.md`, then validates the generated JSON against the schemas.
@@ -27,6 +33,20 @@ Run the tests with:
 ```bash
 pytest -q
 ```
+
+Validate the evidence layer with:
+
+```bash
+python plant_evidence.py validate
+```
+
+Register one new evidence record safely and rebuild the derived attribute catalog with:
+
+```bash
+python plant_evidence.py register tests/fixtures/evidence/new_observed_soil_moisture.json
+```
+
+The registration workflow validates the incoming record, rejects malformed input loudly, appends the raw record to `evidence_records.json`, then rewrites `plant_attributes.json` deterministically from the full raw log.
 
 Run replay evaluation on one fixture or a directory of fixtures with:
 
