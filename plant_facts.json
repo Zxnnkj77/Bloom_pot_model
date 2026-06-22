@@ -2992,6 +2992,46 @@
     }
   },
   {
+    "id": "dandelion",
+    "common_name": "Dandelion",
+    "scientific_name": "Taraxacum officinale",
+    "legacy_category": "edible",
+    "legacy_light_preference_lux": 20000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "soil_even_moist",
+    "controller_family_confidence": "curated_horticultural",
+    "migration_status": "accepted_auto",
+    "special_handling": [
+      "deep_container_for_taproot"
+    ],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "mobile_catalog_expansion_2026-06",
+      "source_type": "curated_catalog_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
+    "id": "spinach",
+    "common_name": "Spinach",
+    "scientific_name": "Spinacia oleracea",
+    "legacy_category": "edible",
+    "legacy_light_preference_lux": 15000,
+    "legacy_water_preference": "evenly_moist",
+    "controller_family": "soil_even_moist",
+    "controller_family_confidence": "curated_horticultural",
+    "migration_status": "accepted_auto",
+    "special_handling": [
+      "cool_season_heat_bolting"
+    ],
+    "manual_review_reasons": [],
+    "provenance": {
+      "source_file": "mobile_catalog_expansion_2026-06",
+      "source_type": "curated_catalog_record",
+      "match_type": "exact_common_name_and_scientific_name"
+    }
+  },
+  {
     "id": "zz_plant",
     "common_name": "ZZ Plant",
     "scientific_name": "Zamioculcas zamiifolia",

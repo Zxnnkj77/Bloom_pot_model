@@ -69,7 +69,8 @@
         "enum": [
           "legacy_direct",
           "legacy_rule_based",
-          "manual_review"
+          "manual_review",
+          "curated_horticultural"
         ]
       },
       "migration_status": {
@@ -111,7 +112,8 @@
           "source_type": {
             "type": "string",
             "enum": [
-              "legacy_backup_record"
+              "legacy_backup_record",
+              "curated_catalog_record"
             ]
           },
           "match_type": {

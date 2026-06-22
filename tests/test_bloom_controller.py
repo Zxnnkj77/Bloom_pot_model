@@ -1,6 +1,7 @@
 import importlib.util
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -869,4 +870,15 @@ def test_migration_outputs_cover_every_legacy_species_once():
     unresolved_species = load_json(UNRESOLVED_SPECIES_PATH)
     legacy_records = load_json(LEGACY_PATH)
 
-    assert len(plant_facts) + len(unresolved_species) == len(legacy_records)
+    legacy_species = Counter(
+        (record["commonName"], record["scientificName"])
+        for record in legacy_records
+    )
+    migrated_species = Counter(
+        (record["common_name"], record["scientific_name"])
+        for record in [*plant_facts, *unresolved_species]
+        if record["provenance"]["source_file"] == LEGACY_PATH.name
+        and record["provenance"]["source_type"] == "legacy_backup_record"
+    )
+
+    assert migrated_species == legacy_species
